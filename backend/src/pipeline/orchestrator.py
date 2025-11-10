@@ -21,17 +21,19 @@ from ..services.creative_copywriter import CreativeCopywriter
 class CampaignPipeline:
   """Orchestrates the entire campaign creative generation process."""
 
-  def __init__(self, output_dir: str = "./output", enable_copywriting: bool = True):
+  def __init__(self, output_dir: str = "./output", enable_copywriting: bool = True, progress_callback=None):
     """
     Initialize the campaign pipeline.
 
     Args:
       output_dir: Base directory for output files
       enable_copywriting: Enable AI copywriting optimization
+      progress_callback: Optional callback function for progress updates
     """
     self.output_dir = Path(output_dir)
     self.output_dir.mkdir(parents=True, exist_ok=True)
     self.enable_copywriting = enable_copywriting
+    self.progress_callback = progress_callback
 
     # Initialize services
     self.asset_manager = AssetManager()

@@ -30,7 +30,7 @@ This platform automates the creation of social media advertising creatives by:
 
 **Key Technologies:**
 - **Backend**: Python 3.11, FastAPI, OpenAI API (DALL-E 3, GPT-4), Pillow
-- **Frontend**: React, Vite, Tailwind CSS
+- **Frontend**: React, Vite
 - **Infrastructure**: Docker, Docker Compose
 
 ---

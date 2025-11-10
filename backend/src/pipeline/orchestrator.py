@@ -21,17 +21,19 @@ from ..services.creative_copywriter import CreativeCopywriter
 class CampaignPipeline:
   """Orchestrates the entire campaign creative generation process."""
 
-  def __init__(self, output_dir: str = "./output", enable_copywriting: bool = True):
+  def __init__(self, output_dir: str = "./output", enable_copywriting: bool = True, progress_callback=None):
     """
     Initialize the campaign pipeline.
 
     Args:
       output_dir: Base directory for output files
       enable_copywriting: Enable AI copywriting optimization
+      progress_callback: Optional callback function for progress updates
     """
     self.output_dir = Path(output_dir)
     self.output_dir.mkdir(parents=True, exist_ok=True)
     self.enable_copywriting = enable_copywriting
+    self.progress_callback = progress_callback
 
     # Initialize services
     self.asset_manager = AssetManager()
@@ -54,6 +56,18 @@ class CampaignPipeline:
       "compliance_summary": {}
     }
 
+  def _update_progress(self, stage: str, message: str, details: Dict = None):
+    """Send progress update if callback is available."""
+    if self.progress_callback:
+      progress_data = {
+        "stage": stage,
+        "message": message,
+        "timestamp": datetime.now().isoformat()
+      }
+      if details:
+        progress_data.update(details)
+      self.progress_callback(progress_data)
+
   def process_campaign(self, brief: CampaignBrief) -> Dict[str, Any]:
     """
     Process an entire campaign brief.
@@ -73,9 +87,22 @@ class CampaignPipeline:
     print(f"Campaign Message: {brief.campaign_message}")
     print(f"Products: {brief.get_product_count()}\n")
 
+    # Progress update: Starting campaign
+    self._update_progress(
+      "initialization",
+      "Campaign processing started",
+      {
+        "total_products": brief.get_product_count(),
+        "target_region": brief.target_region,
+        "target_audience": brief.target_audience
+      }
+    )
+
     # Step 1: AI Copywriting optimization (if enabled)
     if self.copywriter and self.enable_copywriting:
       print("✍️  Generating optimized campaign messages...")
+      self._update_progress("copywriting", "Optimizing campaign message with AI...")
+
       try:
         copy_results = self.copywriter.generate_campaign_copy(brief)
         self.report_data["copywriting"] = copy_results
@@ -101,6 +128,11 @@ class CampaignPipeline:
         self.report_data["copywriting"]["original_message"] = original_message
 
         print(f"\n   ✓ Using optimized message for campaign")
+        self._update_progress(
+          "copywriting",
+          "Message optimization complete",
+          {"optimized_message": copy_results['selected_message']}
+        )
         print()
 
       except Exception as e:
@@ -111,6 +143,8 @@ class CampaignPipeline:
 
     # Step 2: Content moderation check
     print("🔍 Running content moderation...")
+    self._update_progress("moderation", "Checking content compliance...")
+
     moderation_result = self.content_moderator.check_campaign_message(
       brief.campaign_message,
       region=brief.target_region
@@ -123,6 +157,8 @@ class CampaignPipeline:
       for violation in moderation_result["violations"]:
         print(f"   - {violation['type']}: {violation.get('word', violation.get('term', 'unknown'))}")
       self.report_data["errors"].append(error_msg)
+
+      self._update_progress("moderation", "Content moderation failed", {"error": error_msg})
 
       # Create campaign output dir before generating report
       campaign_output = self.output_dir / brief.campaign_id
@@ -138,6 +174,7 @@ class CampaignPipeline:
         self.report_data["warnings"].append(warn_msg)
 
     print(f"✓ Content approved (Risk: {moderation_result['risk_level']})\n")
+    self._update_progress("moderation", "Content approved", {"risk_level": moderation_result['risk_level']})
 
     # Step 3: Initialize brand validator
     if brief.brand_colors:
@@ -154,6 +191,16 @@ class CampaignPipeline:
     for idx, product in enumerate(brief.products, 1):
       print(f"\n[{idx}/{len(brief.products)}] Processing: {product.name}")
       print(f"{'─'*70}")
+
+      self._update_progress(
+        "products",
+        f"Processing product {idx} of {len(brief.products)}: {product.name}",
+        {
+          "current_product": idx,
+          "total_products": len(brief.products),
+          "product_name": product.name
+        }
+      )
 
       try:
         self._process_product(product, brief, campaign_output)
@@ -212,6 +259,17 @@ class CampaignPipeline:
         messages.update(localizations["suggestions"])
         print(f"  🌍 Creating variations for {len(messages)} languages...")
 
+    # Progress update for variations
+    self._update_progress(
+      "variations",
+      f"Creating {len(messages)} language variations with 3 aspect ratios each",
+      {
+        "product_name": product.name,
+        "languages": len(messages),
+        "aspects": 3  # 1x1, 9x16, 16x9
+      }
+    )
+
     with Image.open(asset_path) as img:
       if img.mode != 'RGB':
         img = img.convert('RGB')
@@ -227,6 +285,7 @@ class CampaignPipeline:
           brand_colors=brief.brand_colors  # Pass brand colors for text overlay
         )
         # Flatten for backward compatibility (use English for compliance check)
+        # Note: variations now contains tuples of (final_path, pre_overlay_path)
         variations = all_variations.get("en", {})
       else:
         # Single language - use original method but put in 'en' folder
@@ -240,12 +299,33 @@ class CampaignPipeline:
         )
         all_variations = {"en": variations}
 
+    # Progress update for variations complete
+    total_variations = sum(len(v) for v in all_variations.values())
+    self._update_progress(
+      "variations",
+      f"Created {total_variations} variations for {product.name}",
+      {
+        "product_name": product.name,
+        "variations_created": total_variations,
+        "languages": list(all_variations.keys())
+      }
+    )
+
     # Step 3: Brand compliance check
     compliance_results = {}
     if self.brand_validator:
       print(f"\n🎨 Checking brand compliance...")
-      for name, path in variations.items():
-        compliance = self.brand_validator.validate_creative(path)
+      self._update_progress("compliance", f"Validating brand compliance for {product.name}...")
+
+      for name, paths in variations.items():
+        # Unpack tuple: (final_path, pre_overlay_path)
+        final_path, pre_overlay_path = paths
+
+        # Validate both: colors on pre-overlay, readability on final
+        compliance = self.brand_validator.validate_creative_split(
+          pre_overlay_path,  # For color checking
+          final_path        # For readability checking
+        )
         compliance_results[name] = compliance
 
         if compliance["overall_score"] < 70:
@@ -259,10 +339,13 @@ class CampaignPipeline:
     total_variations = sum(len(v) for v in all_variations.values())
     self.report_data["variations_created"] += total_variations
 
+    # Extract just the final paths for the report (not the tuples)
+    variation_names = list(variations.keys())
+
     product_data = {
       "name": product.name,
       "source": "existing" if product.has_existing_assets() else "generated",
-      "variations": list(variations.keys()),
+      "variations": variation_names,
       "output_path": str(product_output),
       "languages": list(all_variations.keys()),
       "total_files": total_variations
@@ -295,10 +378,20 @@ class CampaignPipeline:
     if asset_path:
       print(f"📁 Using existing asset")
       self.report_data["assets_reused"] += 1
+      self._update_progress(
+        "asset_generation",
+        f"Using existing asset for {product.name}",
+        {"product_name": product.name, "source": "existing"}
+      )
       return asset_path
 
     # Generate new asset
     print(f"🎨 No existing asset found - generating with DALL-E...")
+    self._update_progress(
+      "asset_generation",
+      f"Generating new asset for {product.name} with DALL-E",
+      {"product_name": product.name, "source": "dalle"}
+    )
 
     image_data = self.image_generator.generate_for_product(product, brief)
 
@@ -313,6 +406,11 @@ class CampaignPipeline:
     )
 
     self.report_data["assets_generated"] += 1
+    self._update_progress(
+      "asset_generation",
+      f"Asset generated and saved for {product.name}",
+      {"product_name": product.name, "path": str(generated_path)}
+    )
     return generated_path
 
   def _generate_report(self, output_dir: Path, brief: CampaignBrief) -> None:

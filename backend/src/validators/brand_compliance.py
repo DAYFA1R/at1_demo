@@ -268,6 +268,58 @@ class BrandComplianceValidator:
       "summary": self._generate_summary(overall_score, color_check, readability_check)
     }
 
+  def validate_creative_split(self, pre_overlay_path: Path, final_path: Path) -> Dict:
+    """
+    Run split brand compliance validation.
+
+    This method checks brand colors on the pre-overlay image (without gradient scrim)
+    and text readability on the final image (with gradient scrim), giving us
+    accurate compliance scores for both aspects.
+
+    Args:
+      pre_overlay_path: Path to image before text overlay (for color checking)
+      final_path: Path to final image with overlay (for readability checking)
+
+    Returns:
+      Complete compliance report
+    """
+    # Check brand colors on the original image (no gradient interference)
+    color_check = self.validate_colors(pre_overlay_path)
+
+    # Check text readability on the final image (with gradient for contrast)
+    readability_check = self.validate_text_readability(final_path)
+
+    # Calculate overall score
+    score = 0
+    max_score = 0
+
+    # Color compliance (50 points)
+    max_score += 50
+    if color_check.get("checked"):
+      if color_check.get("compliant"):
+        score += 50
+      else:
+        # Partial credit based on coverage
+        score += color_check.get("brand_color_coverage", 0) * 2.5
+
+    # Readability (50 points)
+    max_score += 50
+    if readability_check.get("readable"):
+      score += 50
+
+    overall_score = round((score / max_score) * 100, 1) if max_score > 0 else 0
+    compliant = overall_score >= 70  # 70% threshold
+
+    return {
+      "compliant": compliant,
+      "overall_score": overall_score,
+      "checks": {
+        "colors": color_check,
+        "readability": readability_check
+      },
+      "summary": self._generate_summary(overall_score, color_check, readability_check)
+    }
+
   def _generate_summary(self, score: float, color_check: Dict,
                         readability_check: Dict) -> str:
     """Generate human-readable summary."""

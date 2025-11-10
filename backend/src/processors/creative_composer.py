@@ -521,7 +521,7 @@ class CreativeComposer:
 
   def create_variations(self, source_image: Image.Image, message: str,
                        output_dir: Path, product_name: str,
-                       brand_colors: Optional[List[str]] = None) -> Dict[str, Path]:
+                       brand_colors: Optional[List[str]] = None) -> Dict[str, tuple]:
     """
     Create all aspect ratio variations from a source image.
 
@@ -533,7 +533,7 @@ class CreativeComposer:
       brand_colors: Optional list of brand colors in hex format
 
     Returns:
-      Dictionary mapping aspect ratio names to file paths
+      Dictionary mapping aspect ratio names to (final_path, pre_overlay_path) tuples
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     results = {}
@@ -547,6 +547,12 @@ class CreativeComposer:
       # Resize to target dimensions
       resized = self.resize_to_dimensions(cropped, aspect_ratio.dimensions)
 
+      # Save pre-overlay version for brand color compliance checking
+      # This preserves the original colors before gradient scrim is applied
+      pre_overlay_filename = f".{aspect_ratio.display_name}_pre_overlay.jpg"  # Hidden file
+      pre_overlay_path = output_dir / pre_overlay_filename
+      resized.save(pre_overlay_path, quality=95, optimize=True)
+
       # Add text overlay with brand colors and smart positioning
       final = self.add_text_overlay(resized, message, position=None, brand_colors=brand_colors)
 
@@ -555,7 +561,7 @@ class CreativeComposer:
       output_path = output_dir / filename
 
       final.save(output_path, quality=95, optimize=True)
-      results[aspect_ratio.display_name] = output_path
+      results[aspect_ratio.display_name] = (output_path, pre_overlay_path)
 
       print(f"    ✓ Saved: {output_path}")
 
@@ -563,7 +569,7 @@ class CreativeComposer:
 
   def process_from_path(self, image_path: Path, message: str,
                         output_dir: Path, product_name: str,
-                        brand_colors: Optional[List[str]] = None) -> Dict[str, Path]:
+                        brand_colors: Optional[List[str]] = None) -> Dict[str, tuple]:
     """
     Process an image from a file path.
 
@@ -575,7 +581,7 @@ class CreativeComposer:
       brand_colors: Optional list of brand colors in hex format
 
     Returns:
-      Dictionary mapping aspect ratio names to file paths
+      Dictionary mapping aspect ratio names to (final_path, pre_overlay_path) tuples
     """
     with Image.open(image_path) as img:
       # Convert to RGB if necessary
@@ -621,6 +627,11 @@ class CreativeComposer:
         # Resize to target dimensions
         resized = self.resize_to_dimensions(cropped, aspect_ratio.dimensions)
 
+        # Save pre-overlay version for brand color compliance checking
+        pre_overlay_filename = f".{aspect_ratio.display_name}_pre_overlay.jpg"  # Hidden file
+        pre_overlay_path = lang_dir / pre_overlay_filename
+        resized.save(pre_overlay_path, quality=95, optimize=True)
+
         # Add localized text overlay with language-specific font, brand colors, and smart positioning
         final = self.add_text_overlay(resized, message, position=None,
                                     language_code=lang_code, brand_colors=brand_colors)
@@ -630,7 +641,7 @@ class CreativeComposer:
         output_path = lang_dir / filename
 
         final.save(output_path, quality=95, optimize=True)
-        lang_results[aspect_ratio.display_name] = output_path
+        lang_results[aspect_ratio.display_name] = (output_path, pre_overlay_path)
 
         print(f"    ✓ {aspect_ratio.display_name}: {output_path}")
 

@@ -78,19 +78,68 @@ class ImageGenerator:
         else:
           return "white"
 
-      # Determine dominant color
+      # Calculate color characteristics
+      saturation = (max_val - min_val) / max_val if max_val > 0 else 0
+      brightness = max_val / 255.0
+
+      # Detect specific color families
+
+      # Pink: high red, significant blue, lower green
+      if r > 180 and b > 100 and b > g and r > b:
+        if brightness > 0.8:
+          return "hot pink"
+        return "pink"
+
+      # Yellow: high red and green, low blue
+      if r > 200 and g > 180 and b < 150 and min(r, g) > b:
+        if g > 220 and r > 220:
+          return "bright yellow"
+        return "golden yellow"
+
+      # Orange: red > green > blue
+      if r > g > b and g > 100 and r > 180:
+        return "orange"
+
+      # Purple/Magenta: high red and blue, lower green
+      if r > 150 and b > 150 and r > g and b > g:
+        if r > b + 30:
+          return "magenta"
+        elif b > r + 30:
+          return "purple"
+        return "violet"
+
+      # Cyan/Teal: high green and blue, lower red
+      if g > 150 and b > 150 and g > r and b > r:
+        if g > b + 30:
+          return "cyan"
+        elif b > g + 30:
+          return "teal"
+        return "turquoise"
+
+      # Red: dominant red channel
       if r > g and r > b:
-        if g > 100:
-          return "orange" if g > b else "red-orange"
-        return "red" if r > 200 else "dark red"
+        if saturation > 0.6 and brightness > 0.6:
+          return "red"
+        elif brightness < 0.4:
+          return "dark red"
+        return "red"
+
+      # Green: dominant green channel
       elif g > r and g > b:
-        if b > 100:
-          return "teal" if b > r else "cyan"
-        return "green" if g > 200 else "dark green"
+        if saturation > 0.6 and brightness > 0.6:
+          return "green"
+        elif brightness < 0.4:
+          return "dark green"
+        return "green"
+
+      # Blue: dominant blue channel
       elif b > r and b > g:
-        if r > 100:
-          return "purple" if r > g else "magenta"
-        return "blue" if b > 200 else "dark blue"
+        if saturation > 0.6 and brightness > 0.6:
+          return "blue"
+        elif brightness < 0.4:
+          return "dark blue"
+        return "blue"
+
       else:
         return "mixed color"
     except:

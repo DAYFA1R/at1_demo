@@ -56,6 +56,18 @@ class CampaignPipeline:
       "compliance_summary": {}
     }
 
+  def _update_progress(self, stage: str, message: str, details: Dict = None):
+    """Send progress update if callback is available."""
+    if self.progress_callback:
+      progress_data = {
+        "stage": stage,
+        "message": message,
+        "timestamp": datetime.now().isoformat()
+      }
+      if details:
+        progress_data.update(details)
+      self.progress_callback(progress_data)
+
   def process_campaign(self, brief: CampaignBrief) -> Dict[str, Any]:
     """
     Process an entire campaign brief.
@@ -75,9 +87,22 @@ class CampaignPipeline:
     print(f"Campaign Message: {brief.campaign_message}")
     print(f"Products: {brief.get_product_count()}\n")
 
+    # Progress update: Starting campaign
+    self._update_progress(
+      "initialization",
+      "Campaign processing started",
+      {
+        "total_products": brief.get_product_count(),
+        "target_region": brief.target_region,
+        "target_audience": brief.target_audience
+      }
+    )
+
     # Step 1: AI Copywriting optimization (if enabled)
     if self.copywriter and self.enable_copywriting:
       print("✍️  Generating optimized campaign messages...")
+      self._update_progress("copywriting", "Optimizing campaign message with AI...")
+
       try:
         copy_results = self.copywriter.generate_campaign_copy(brief)
         self.report_data["copywriting"] = copy_results
@@ -103,6 +128,11 @@ class CampaignPipeline:
         self.report_data["copywriting"]["original_message"] = original_message
 
         print(f"\n   ✓ Using optimized message for campaign")
+        self._update_progress(
+          "copywriting",
+          "Message optimization complete",
+          {"optimized_message": copy_results['selected_message']}
+        )
         print()
 
       except Exception as e:

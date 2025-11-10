@@ -266,6 +266,9 @@ async def get_campaign_assets(campaign_id: str):
         if lang_or_file.is_dir():
           # Language subdirectory
           for image_file in lang_or_file.glob("*.jpg"):
+            # Skip hidden pre-overlay files used for compliance checking
+            if image_file.name.startswith('.'):
+              continue
             assets.append({
               "product": product_dir.name,
               "language": lang_or_file.name,
@@ -275,6 +278,9 @@ async def get_campaign_assets(campaign_id: str):
             })
         elif lang_or_file.suffix == ".jpg":
           # Direct image file (no localization)
+          # Skip hidden pre-overlay files
+          if lang_or_file.name.startswith('.'):
+            continue
           assets.append({
             "product": product_dir.name,
             "language": "en",

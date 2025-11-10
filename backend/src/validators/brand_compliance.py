@@ -67,8 +67,7 @@ class BrandComplianceValidator:
     img.thumbnail((150, 150))
 
     # Convert to RGB if needed
-    if img.mode != 'RGB':
-      img = img.convert('RGB')
+    img = ensure_rgb(img)
 
     # Use color quantization to reduce to a palette of distinct colors
     # This groups similar colors together instead of counting every pixel shade
@@ -177,8 +176,7 @@ class BrandComplianceValidator:
     """
     # Basic implementation: check if image has good contrast areas
     with Image.open(image_path) as img:
-      if img.mode != 'RGB':
-        img = img.convert('RGB')
+      img = ensure_rgb(img)
 
       # Sample bottom portion where text usually is
       width, height = img.size

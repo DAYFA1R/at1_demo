@@ -119,6 +119,13 @@ campaign_message: Fuel your journey with natural energy
 - **Risk assessment** - Categorizes content as low/medium/high risk
 - **Compliance scoring** - Scores each creative 0-100 for brand alignment
 
+### AI-Powered Optimization
+- **Message optimization** - Uses GPT-4 to optimize campaign messages for target audiences
+- **Persona analysis** - Extracts values and emotional triggers from audience demographics
+- **A/B test variants** - Generates multiple message approaches for testing
+- **Localization** - Automatically translates and culturally adapts messages for different regions
+- **Multi-language export** - Creates separate image sets with localized text for each language
+
 ## Content Moderation & Brand Compliance
 
 The pipeline automatically validates all campaigns for quality and compliance:
@@ -143,21 +150,49 @@ To enable brand compliance, include `brand_colors` in your campaign brief:
 }
 ```
 
+## AI Copywriting & Localization
+
+The pipeline automatically optimizes messages and creates localized versions:
+
+**Message Optimization:**
+- Analyzes target audience demographics and psychographics
+- Generates messages that appeal to audience values and emotional triggers
+- Adapts tone for regional preferences (e.g., sophisticated for Europe, direct for North America)
+- Creates A/B test variants with different messaging approaches
+
+**Automatic Localization:**
+- Detects target region and suggests appropriate languages
+- Generates culturally-adapted translations (not just literal)
+- Creates separate image folders for each language
+- Maintains message effectiveness across all languages
+
+This feature works automatically with existing campaign briefs - no changes needed!
+
 ## Output Structure
 
+With localization enabled (automatic for multi-language regions):
 ```
 output/
 └── {campaign_id}/
-    ├── campaign_report.json        # Includes moderation & compliance data
+    ├── campaign_report.json        # Includes copywriting & localization data
     ├── {product_1}/
-    │   ├── 1x1.jpg
-    │   ├── 9x16.jpg
-    │   └── 16x9.jpg
+    │   ├── en/                     # English versions
+    │   │   ├── 1x1.jpg
+    │   │   ├── 9x16.jpg
+    │   │   └── 16x9.jpg
+    │   ├── de-DE/                  # German versions
+    │   │   ├── 1x1.jpg
+    │   │   ├── 9x16.jpg
+    │   │   └── 16x9.jpg
+    │   └── fr-FR/                  # French versions
+    │       ├── 1x1.jpg
+    │       ├── 9x16.jpg
+    │       └── 16x9.jpg
     └── {product_2}/
-        ├── 1x1.jpg
-        ├── 9x16.jpg
-        └── 16x9.jpg
+        └── ... (same structure)
 ```
+
+Single-language regions default to `en/` folder only.
 
 ## Requirements
 
@@ -170,7 +205,9 @@ output/
 - **Smart cropping**: Center-based cropping maintains focal points across ratios
 - **Rate limiting**: Built-in delays to respect API limits
 - **Validate early**: Content moderation runs before generation to catch issues early
+- **Optimize intelligently**: AI analyzes audience before generating messages
+- **Localize automatically**: Creates multi-language versions for global regions
 - **Quality gates**: Brand compliance scoring ensures consistent output
 - **Error resilience**: Continues processing even if individual products fail
-- **Organized output**: Clear directory structure by campaign and product
-- **Audit trail**: All validations tracked in detailed JSON reports
+- **Organized output**: Clear directory structure by campaign/product/language
+- **Audit trail**: All optimizations and validations tracked in detailed JSON reports

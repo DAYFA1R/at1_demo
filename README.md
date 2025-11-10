@@ -104,13 +104,13 @@ campaign_message: Fuel your journey with natural energy
 
 ## Features
 
-✅ **Multi-product support** - Process 2+ products per campaign
-✅ **Asset management** - Reuse existing assets or generate new ones with DALL-E
-✅ **Multiple formats** - Create 3 aspect ratios (1:1, 9:16, 16:9)
-✅ **Text overlays** - Automatic campaign message placement
-✅ **Smart prompts** - Context-aware generation based on region and audience
-✅ **JSON/YAML support** - Flexible campaign brief formats
-✅ **Detailed reporting** - JSON reports with processing statistics
+- **Multi-product support** - Process 2+ products per campaign
+- **Asset management** - Reuse existing assets or generate new ones with DALL-E
+- **Multiple formats** - Create 3 aspect ratios (1:1, 9:16, 16:9)
+- **Text overlays** - Automatic campaign message placement
+- **Smart prompts** - Context-aware generation based on region and audience
+- **JSON/YAML support** - Flexible campaign brief formats
+- **Detailed reporting** - JSON reports with processing statistics
 
 ## Output Structure
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import './CampaignForm.css';
 
 export default function CampaignForm({ onSubmit }) {
@@ -13,6 +13,73 @@ export default function CampaignForm({ onSubmit }) {
     brand_colors: ['#007AFF'],
     enable_copywriting: true,
   });
+
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const content = e.target.result;
+        let data;
+
+        if (file.name.endsWith('.json')) {
+          data = JSON.parse(content);
+        } else if (file.name.endsWith('.yaml') || file.name.endsWith('.yml')) {
+          // Simple YAML parser for our specific format
+          // For production, use a library like js-yaml
+          const lines = content.split('\n');
+          data = {};
+          let currentKey = null;
+          let productsArray = [];
+          let currentProduct = null;
+
+          lines.forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) return;
+
+            if (trimmed.startsWith('products:')) {
+              currentKey = 'products';
+            } else if (trimmed.startsWith('- name:')) {
+              if (currentProduct) productsArray.push(currentProduct);
+              currentProduct = { name: trimmed.split(':')[1].trim(), description: '', existing_assets: [] };
+            } else if (trimmed.startsWith('description:') && currentProduct) {
+              currentProduct.description = trimmed.split(':')[1].trim();
+            } else if (!trimmed.startsWith('-') && trimmed.includes(':')) {
+              const [key, ...valueParts] = trimmed.split(':');
+              const value = valueParts.join(':').trim();
+              if (key === 'brand_colors') {
+                data[key] = value ? value.replace(/[\[\]]/g, '').split(',').map(c => c.trim()) : [];
+              } else {
+                data[key] = value;
+              }
+            }
+          });
+
+          if (currentProduct) productsArray.push(currentProduct);
+          if (productsArray.length) data.products = productsArray;
+        }
+
+        // Merge loaded data with form data
+        setFormData({
+          products: data.products || formData.products,
+          target_region: data.target_region || formData.target_region,
+          target_audience: data.target_audience || formData.target_audience,
+          campaign_message: data.campaign_message || formData.campaign_message,
+          brand_colors: data.brand_colors || formData.brand_colors,
+          enable_copywriting: data.enable_copywriting !== undefined ? data.enable_copywriting : formData.enable_copywriting,
+        });
+
+      } catch (error) {
+        alert(`Error parsing file: ${error.message}`);
+      }
+    };
+
+    reader.readAsText(file);
+  };
 
   const handleProductChange = (index, field, value) => {
     const newProducts = [...formData.products];
@@ -41,7 +108,26 @@ export default function CampaignForm({ onSubmit }) {
 
   return (
     <form className="campaign-form" onSubmit={handleSubmit}>
-      <h2>Create Campaign</h2>
+      <div className="form-header">
+        <h2>Create Campaign</h2>
+        <div className="file-upload-section">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,.yaml,.yml"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="upload-btn"
+          >
+            📁 Load from File
+          </button>
+          <span className="file-hint">JSON or YAML</span>
+        </div>
+      </div>
 
       <div className="form-section">
         <h3>Products (min 2)</h3>

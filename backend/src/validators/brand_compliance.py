@@ -15,7 +15,7 @@ class BrandComplianceValidator:
 
   def __init__(self, brand_colors: Optional[List[str]] = None,
                logo_path: Optional[str] = None,
-               color_tolerance: int = 15):
+               color_tolerance: int = 25):
     """
     Initialize the brand compliance validator.
 
@@ -23,7 +23,7 @@ class BrandComplianceValidator:
       brand_colors: List of brand colors in hex format (e.g., ["#FF0000"])
       logo_path: Path to brand logo file
       color_tolerance: Color matching tolerance (0-100, lower = stricter)
-                      Default 15 means colors must be 85% similar to count
+                      Default 25 means colors must be 75% similar to count
     """
     self.brand_colors = self._parse_brand_colors(brand_colors or [])
     self.logo_path = Path(logo_path) if logo_path else None
@@ -93,8 +93,15 @@ class BrandComplianceValidator:
     if img.mode != 'RGB':
       img = img.convert('RGB')
 
-    # Get all pixels
-    pixels = list(img.getdata())
+    # Use color quantization to reduce to a palette of distinct colors
+    # This groups similar colors together instead of counting every pixel shade
+    quantized = img.quantize(colors=32, method=2)  # 32 colors, max coverage method
+
+    # Convert back to RGB to get the palette colors
+    quantized_rgb = quantized.convert('RGB')
+
+    # Get all pixels from quantized image
+    pixels = list(quantized_rgb.getdata())
 
     # Count color occurrences
     color_counts = Counter(pixels)

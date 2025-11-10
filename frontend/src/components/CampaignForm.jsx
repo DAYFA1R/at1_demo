@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import './CampaignForm.css';
 
 export default function CampaignForm({ onSubmit }) {
@@ -14,7 +14,12 @@ export default function CampaignForm({ onSubmit }) {
     enable_copywriting: true,
   });
 
+  const [generatedImages, setGeneratedImages] = useState([]);
+  const [showImageBrowser, setShowImageBrowser] = useState(false);
+  const [selectedProductIndex, setSelectedProductIndex] = useState(null);
+
   const fileInputRef = useRef(null);
+  const productImageInputRefs = useRef({});
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -115,6 +120,71 @@ export default function CampaignForm({ onSubmit }) {
     onSubmit(formData);
   };
 
+  // Fetch generated images on mount
+  useEffect(() => {
+    const fetchGeneratedImages = async () => {
+      try {
+        const response = await fetch('/api/generated-images');
+        const data = await response.json();
+        setGeneratedImages(data.images || []);
+      } catch (err) {
+        console.error('Failed to load generated images:', err);
+      }
+    };
+
+    fetchGeneratedImages();
+  }, []);
+
+  // Handle product image upload
+  const handleProductImageUpload = async (event, productIndex) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+
+      // Add uploaded file path to product's existing_assets
+      handleProductChange(productIndex, 'existing_assets', [data.absolute_path]);
+      handleProductChange(productIndex, 'imagePreview', data.path);
+    } catch (err) {
+      alert(`Failed to upload image: ${err.message}`);
+    }
+  };
+
+  // Open image browser for a specific product
+  const openImageBrowser = (productIndex) => {
+    setSelectedProductIndex(productIndex);
+    setShowImageBrowser(true);
+  };
+
+  // Select a generated image for a product
+  const selectGeneratedImage = (image) => {
+    if (selectedProductIndex !== null) {
+      handleProductChange(selectedProductIndex, 'existing_assets', [image.absolute_path]);
+      handleProductChange(selectedProductIndex, 'imagePreview', image.url);
+      setShowImageBrowser(false);
+      setSelectedProductIndex(null);
+    }
+  };
+
+  // Clear selected image for a product
+  const clearProductImage = (productIndex) => {
+    handleProductChange(productIndex, 'existing_assets', []);
+    handleProductChange(productIndex, 'imagePreview', null);
+  };
+
   return (
     <form className="campaign-form" onSubmit={handleSubmit}>
       <div className="form-header">
@@ -167,6 +237,48 @@ export default function CampaignForm({ onSubmit }) {
               onChange={(e) => handleProductChange(index, 'description', e.target.value)}
               required
             />
+
+            {/* Image Selection Section */}
+            <div className="product-image-section">
+              <label>Product Image (optional - uses AI generation if not provided)</label>
+
+              {product.imagePreview ? (
+                <div className="image-preview-container">
+                  <img src={product.imagePreview} alt="Product preview" className="product-preview" />
+                  <button
+                    type="button"
+                    onClick={() => clearProductImage(index)}
+                    className="clear-image-btn"
+                  >
+                    ✕ Clear Image
+                  </button>
+                </div>
+              ) : (
+                <div className="image-selection-buttons">
+                  <input
+                    ref={(el) => (productImageInputRefs.current[index] = el)}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleProductImageUpload(e, index)}
+                    style={{ display: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => productImageInputRefs.current[index]?.click()}
+                    className="upload-image-btn"
+                  >
+                    📤 Upload Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openImageBrowser(index)}
+                    className="browse-images-btn"
+                  >
+                    🖼️ Browse Generated Images
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ))}
         <button type="button" onClick={addProduct} className="add-btn">
@@ -242,6 +354,46 @@ export default function CampaignForm({ onSubmit }) {
       <button type="submit" className="submit-btn">
         Generate Campaign
       </button>
+
+      {/* Image Browser Modal */}
+      {showImageBrowser && (
+        <div className="modal-overlay" onClick={() => setShowImageBrowser(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Select a Generated Image</h3>
+              <button
+                type="button"
+                onClick={() => setShowImageBrowser(false)}
+                className="modal-close-btn"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="generated-images-grid">
+              {generatedImages.length === 0 ? (
+                <div className="no-images-message">
+                  No previously generated images found. Generate a campaign first to see images here.
+                </div>
+              ) : (
+                generatedImages.map((image, idx) => (
+                  <div
+                    key={idx}
+                    className="generated-image-card"
+                    onClick={() => selectGeneratedImage(image)}
+                  >
+                    <img src={image.url} alt={`${image.product} from ${image.campaign_id}`} />
+                    <div className="image-card-info">
+                      <div className="image-product-name">{image.product}</div>
+                      <div className="image-campaign-id">{image.campaign_id.substring(9, 17)}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

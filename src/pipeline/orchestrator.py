@@ -5,9 +5,9 @@ Main orchestration pipeline for campaign creative generation.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
+
 from PIL import Image
-import io
 
 from ..models.campaign import CampaignBrief, Product
 from ..services.asset_manager import AssetManager

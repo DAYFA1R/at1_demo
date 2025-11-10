@@ -77,11 +77,13 @@
 
 .summary-badge {
   display: inline-block;
-  background: #f0f0f0;
+  background: rgba(18, 18, 26, 0.8);
   padding: 0.75rem 1.5rem;
   border-radius: 20px;
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-primary);
+  border: 2px solid rgba(5, 217, 232, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .product-group {
@@ -170,7 +172,7 @@
 .filename {
   font-family: monospace;
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -197,25 +199,31 @@
 .no-results {
   text-align: center;
   padding: 3rem;
-  color: #999;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  font-size: 1.125rem;
 }
 
 .report-section {
   margin-top: 3rem;
-  padding: 1.5rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  background: var(--bg-card);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+              0 0 20px rgba(5, 217, 232, 0.15);
+  border: 2px solid rgba(5, 217, 232, 0.3);
 }
 
 .report-section h3 {
   margin-top: 0;
-  color: #333;
-  border-bottom: 2px solid #34c759;
-  padding-bottom: 0.5rem;
+  color: var(--neon-cyan);
+  border-bottom: 2px solid var(--neon-cyan);
+  padding-bottom: 0.75rem;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  text-shadow: 0 0 15px rgba(5, 217, 232, 0.5);
 }
 
 .report-grid {
@@ -227,28 +235,53 @@
 
 .report-item {
   padding: 1rem;
-  background: #f9f9f9;
+  background: rgba(18, 18, 26, 0.6);
   border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.report-item strong {
+  color: var(--neon-pink);
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .report-item.warning {
-  background: #fff3cd;
-  color: #856404;
+  background: rgba(255, 251, 150, 0.1);
+  border-color: var(--neon-yellow);
+  color: var(--neon-yellow);
+}
+
+.report-item.warning strong {
+  color: var(--neon-yellow);
 }
 
 .compliance-info {
-  padding: 1rem;
-  background: #f0f9ff;
-  border-radius: 8px;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  background: rgba(214, 57, 255, 0.1);
+  border-radius: 12px;
   margin-top: 1rem;
+  border: 2px solid rgba(214, 57, 255, 0.3);
 }
 
 .compliance-info h4 {
   margin-top: 0;
-  color: #555;
+  color: var(--neon-purple);
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+  text-shadow: 0 0 10px rgba(214, 57, 255, 0.4);
 }
 
 .compliance-info p {
-  margin: 0.5rem 0;
-  color: #666;
+  margin: 0.75rem 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.compliance-info strong {
+  color: var(--neon-pink);
+  font-weight: 700;
 }

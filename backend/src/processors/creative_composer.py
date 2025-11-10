@@ -19,37 +19,80 @@ class CreativeComposer:
     """Initialize the creative composer."""
     self.font_path = self._find_font()
 
-  def _find_font(self) -> Optional[str]:
+  def _find_font(self, language_code: Optional[str] = None) -> Optional[str]:
     """
-    Find a suitable font for text overlays.
+    Find a suitable font for text overlays with international script support.
 
-    Searches platform-specific font directories for common fonts.
+    Searches platform-specific font directories, prioritizing fonts that support
+    Arabic, Hebrew, CJK, and other international scripts.
+
+    Args:
+      language_code: Optional language code (e.g., 'ar', 'he', 'zh') to prioritize specific fonts
 
     Returns:
       Path to font file if found, None to use PIL default
     """
     system = platform.system()
 
+    # Check if we need international script support
+    needs_arabic = language_code and language_code.startswith(('ar', 'fa', 'ur'))
+    needs_hebrew = language_code and language_code.startswith('he')
+    needs_cjk = language_code and language_code.startswith(('zh', 'ja', 'ko'))
+
     font_candidates = []
 
     if system == "Darwin":  # macOS
-      font_candidates = [
+      # macOS fonts with international support
+      if needs_arabic or needs_hebrew:
+        font_candidates.extend([
+          "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+          "/Library/Fonts/Arial.ttf",
+        ])
+      font_candidates.extend([
         "/System/Library/Fonts/Helvetica.ttc",
         "/System/Library/Fonts/SFNSDisplay.ttf",
-        "/Library/Fonts/Arial.ttf",
-      ]
+      ])
     elif system == "Windows":
-      font_candidates = [
+      # Windows fonts with international support
+      if needs_arabic:
+        font_candidates.extend([
+          "C:/Windows/Fonts/arialuni.ttf",
+          "C:/Windows/Fonts/tahoma.ttf",
+        ])
+      if needs_hebrew:
+        font_candidates.extend([
+          "C:/Windows/Fonts/arialuni.ttf",
+          "C:/Windows/Fonts/arial.ttf",
+        ])
+      font_candidates.extend([
         "C:/Windows/Fonts/arial.ttf",
         "C:/Windows/Fonts/calibri.ttf",
         "C:/Windows/Fonts/segoeui.ttf",
-      ]
-    else:  # Linux
-      font_candidates = [
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+      ])
+    else:  # Linux / Docker
+      # Noto fonts have excellent international support
+      if needs_arabic:
+        font_candidates.extend([
+          "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+          "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
+        ])
+      if needs_hebrew:
+        font_candidates.extend([
+          "/usr/share/fonts/truetype/noto/NotoSansHebrew-Regular.ttf",
+        ])
+      if needs_cjk:
+        font_candidates.extend([
+          "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        ])
+
+      # General fonts with good Unicode coverage
+      font_candidates.extend([
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-      ]
+      ])
 
     for font in font_candidates:
       if Path(font).exists():
@@ -110,7 +153,7 @@ class CreativeComposer:
     return image.resize(dimensions, Image.Resampling.LANCZOS)
 
   def add_text_overlay(self, image: Image.Image, message: str,
-                       position: str = "bottom") -> Image.Image:
+                       position: str = "bottom", language_code: Optional[str] = None) -> Image.Image:
     """
     Add text overlay with semi-transparent background.
 
@@ -118,6 +161,7 @@ class CreativeComposer:
       image: Source image
       message: Text message to overlay
       position: Position of text ("top", "bottom", "center")
+      language_code: Optional language code for font selection (e.g., 'ar', 'he', 'zh')
 
     Returns:
       Image with text overlay
@@ -129,10 +173,12 @@ class CreativeComposer:
     # Aim for readable text that scales with image size
     font_size = max(24, min(72, img.width // 15))
 
-    # Load font
+    # Load font with language-specific support
     try:
-      if self.font_path:
-        font = ImageFont.truetype(self.font_path, font_size)
+      # Get language-specific font if provided
+      font_path = self._find_font(language_code) if language_code else self.font_path
+      if font_path:
+        font = ImageFont.truetype(font_path, font_size)
       else:
         font = ImageFont.load_default()
     except Exception:
@@ -282,8 +328,8 @@ class CreativeComposer:
         # Resize to target dimensions
         resized = self.resize_to_dimensions(cropped, aspect_ratio.dimensions)
 
-        # Add localized text overlay
-        final = self.add_text_overlay(resized, message, position="bottom")
+        # Add localized text overlay with language-specific font
+        final = self.add_text_overlay(resized, message, position="bottom", language_code=lang_code)
 
         # Save with quality optimization
         filename = f"{aspect_ratio.display_name}.jpg"

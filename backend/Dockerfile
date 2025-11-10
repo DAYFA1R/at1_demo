@@ -4,10 +4,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for image processing
+# Install system dependencies for image processing and international fonts
 RUN apt-get update && apt-get install -y \
   libgl1 \
   libglib2.0-0 \
+  fonts-noto \
+  fonts-noto-extra \
+  fonts-dejavu-core \
+  fontconfig \
+  && fc-cache -f -v \
   && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies

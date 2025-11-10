@@ -11,6 +11,12 @@ from collections import Counter
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 
 from ..models.campaign import AspectRatio
+from ..utils.color_utils import (
+    hex_to_rgb,
+    calculate_contrast_ratio,
+    relative_luminance
+)
+from ..utils.image_utils import ensure_rgb
 
 
 class CreativeComposer:
@@ -167,43 +173,13 @@ class CreativeComposer:
     """
     return image.resize(dimensions, Image.Resampling.LANCZOS)
 
-  def _hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
-    """Convert hex color to RGB tuple."""
-    hex_color = hex_color.lstrip('#')
-    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-
-  def _relative_luminance(self, rgb: Tuple[int, int, int]) -> float:
-    """Calculate relative luminance per WCAG guidelines."""
-    r, g, b = [c/255.0 for c in rgb]
-
-    # Apply gamma correction
-    r = r/12.92 if r <= 0.03928 else ((r + 0.055)/1.055) ** 2.4
-    g = g/12.92 if g <= 0.03928 else ((g + 0.055)/1.055) ** 2.4
-    b = b/12.92 if b <= 0.03928 else ((b + 0.055)/1.055) ** 2.4
-
-    # WCAG luminance formula
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-  def calculate_contrast_ratio(self, color1: Tuple[int, int, int],
-                               color2: Tuple[int, int, int]) -> float:
-    """Calculate WCAG contrast ratio between two colors."""
-    # Convert to relative luminance
-    l1 = self._relative_luminance(color1)
-    l2 = self._relative_luminance(color2)
-
-    # WCAG contrast formula
-    lighter = max(l1, l2)
-    darker = min(l1, l2)
-
-    return (lighter + 0.05) / (darker + 0.05)
-
   def _is_light(self, rgb: Tuple[int, int, int]) -> bool:
     """Check if a color is light based on luminance."""
-    return self._relative_luminance(rgb) > 0.5
+    return relative_luminance(rgb) > 0.5
 
   def _is_dark(self, rgb: Tuple[int, int, int]) -> bool:
     """Check if a color is dark based on luminance."""
-    return self._relative_luminance(rgb) <= 0.5
+    return relative_luminance(rgb) <= 0.5
 
   def _extract_text_region(self, image: Image.Image, position: str) -> Image.Image:
     """Extract the region where text will be placed."""
@@ -238,8 +214,7 @@ class CreativeComposer:
       text_region, region_position = self._find_best_text_region(image)
 
     # Convert to RGB if needed
-    if text_region.mode != 'RGB':
-      text_region = text_region.convert('RGB')
+    text_region = ensure_rgb(text_region)
 
     # Get dominant colors in that region
     pixels = list(text_region.getdata())
@@ -277,8 +252,7 @@ class CreativeComposer:
 
     for position, (x1, y1, x2, y2) in regions.items():
       region = image.crop((x1, y1, x2, y2))
-      if region.mode != 'RGB':
-        region = region.convert('RGB')
+      region = ensure_rgb(region)
 
       # Calculate uniformity and luminance
       pixels = list(region.getdata())
@@ -313,7 +287,7 @@ class CreativeComposer:
     """Select text and outline colors that are brand-compliant and accessible."""
 
     # Parse brand colors to RGB
-    brand_rgb = [self._hex_to_rgb(c) for c in brand_colors]
+    brand_rgb = [hex_to_rgb(c) for c in brand_colors]
     image_bg_color = region_analysis["average_color"]
 
     # Separate light and dark brand colors
@@ -342,13 +316,13 @@ class CreativeComposer:
 
     for text_color in text_candidates:
       # Test contrast between text and actual image background
-      ratio = self.calculate_contrast_ratio(text_color, image_bg_color)
+      ratio = calculate_contrast_ratio(text_color, image_bg_color)
       if ratio >= MIN_CONTRAST and ratio > best_ratio:
         best_ratio = ratio
         # Choose outline color that contrasts with text
         outline_color = None
         for outline in outline_candidates:
-          outline_ratio = self.calculate_contrast_ratio(text_color, outline)
+          outline_ratio = calculate_contrast_ratio(text_color, outline)
           if outline_ratio >= 3.0:  # Lower threshold for outline
             outline_color = outline
             break
@@ -371,14 +345,14 @@ class CreativeComposer:
         best_combo = {
           "text_color": black,
           "bg_color": white,
-          "contrast_ratio": self.calculate_contrast_ratio(black, image_bg_color)
+          "contrast_ratio": calculate_contrast_ratio(black, image_bg_color)
         }
       else:
         # Dark background: white text with BLACK scrim (darkens already-dark background)
         best_combo = {
           "text_color": white,
           "bg_color": black,
-          "contrast_ratio": self.calculate_contrast_ratio(white, image_bg_color)
+          "contrast_ratio": calculate_contrast_ratio(white, image_bg_color)
         }
 
     return best_combo
@@ -689,8 +663,7 @@ class CreativeComposer:
     """
     with Image.open(image_path) as img:
       # Convert to RGB if necessary
-      if img.mode != 'RGB':
-        img = img.convert('RGB')
+      img = ensure_rgb(img)
 
       return self.create_variations(img, message, output_dir, product_name, brand_colors)
 

@@ -69,7 +69,7 @@ This platform automates the creation of social media advertising creatives by:
 ### First Campaign
 
 1. Navigate to http://localhost:5173
-2. Fill out the campaign form:
+2. Fill out the campaign form OR load a JSON or YAML file from `/examples`:
    - Add 2+ products with descriptions (minimum 2 required)
    - Set target region and audience
    - Enter campaign message

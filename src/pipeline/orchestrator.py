@@ -83,7 +83,11 @@ class CampaignPipeline:
       for violation in moderation_result["violations"]:
         print(f"   - {violation['type']}: {violation.get('word', violation.get('term', 'unknown'))}")
       self.report_data["errors"].append(error_msg)
-      self._generate_report(self.output_dir / brief.campaign_id, brief)
+
+      # Create campaign output dir before generating report
+      campaign_output = self.output_dir / brief.campaign_id
+      campaign_output.mkdir(parents=True, exist_ok=True)
+      self._generate_report(campaign_output, brief)
       return self.report_data
 
     if moderation_result["warnings"]:
@@ -248,6 +252,23 @@ class CampaignPipeline:
     total_products = len(self.report_data["products_processed"])
     successful_products = total_products - len(self.report_data["errors"])
 
+    # Calculate compliance summary
+    if self.brand_validator:
+      compliance_scores = []
+      for product in self.report_data["products_processed"]:
+        if "compliance" in product:
+          for ratio_compliance in product["compliance"].values():
+            compliance_scores.append(ratio_compliance["overall_score"])
+
+      if compliance_scores:
+        avg_compliance = sum(compliance_scores) / len(compliance_scores)
+        self.report_data["compliance_summary"] = {
+          "enabled": True,
+          "average_score": round(avg_compliance, 1),
+          "total_checks": len(compliance_scores),
+          "all_compliant": all(score >= 70 for score in compliance_scores)
+        }
+
     self.report_data["summary"] = {
       "campaign_id": brief.campaign_id,
       "total_products": total_products,
@@ -256,7 +277,8 @@ class CampaignPipeline:
       "assets_generated": self.report_data["assets_generated"],
       "assets_reused": self.report_data["assets_reused"],
       "success_rate": f"{(successful_products / max(1, total_products) * 100):.1f}%",
-      "duration_seconds": self.report_data["duration_seconds"]
+      "duration_seconds": self.report_data["duration_seconds"],
+      "total_warnings": len(self.report_data["warnings"])
     }
 
     # Save report

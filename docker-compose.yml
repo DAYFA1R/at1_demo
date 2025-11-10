@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -11,8 +9,6 @@ services:
       - ./backend:/app
       - ./backend/output:/app/output
       - /app/venv  # Don't mount venv from host
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
     env_file:
       - ./backend/.env
     networks:

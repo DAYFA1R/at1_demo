@@ -9,6 +9,9 @@ from collections import Counter
 from PIL import Image
 import colorsys
 
+from ..utils.color_utils import hex_to_rgb, rgb_to_hex, color_distance
+from ..utils.image_utils import ensure_rgb
+
 
 class BrandComplianceValidator:
   """Validates creative assets meet brand guidelines."""
@@ -41,38 +44,12 @@ class BrandComplianceValidator:
     """
     rgb_colors = []
     for hex_color in hex_colors:
-      # Remove # if present
-      hex_color = hex_color.lstrip('#')
-      # Convert to RGB
       try:
-        r = int(hex_color[0:2], 16)
-        g = int(hex_color[2:4], 16)
-        b = int(hex_color[4:6], 16)
-        rgb_colors.append((r, g, b))
-      except (ValueError, IndexError):
+        rgb_colors.append(hex_to_rgb(hex_color))
+      except ValueError:
         # Skip invalid colors
         continue
     return rgb_colors
-
-  def _rgb_to_hex(self, rgb: Tuple[int, int, int]) -> str:
-    """Convert RGB tuple to hex string."""
-    return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
-
-  def _color_distance(self, color1: Tuple[int, int, int],
-                      color2: Tuple[int, int, int]) -> float:
-    """
-    Calculate perceptual distance between two colors.
-
-    Uses simple Euclidean distance in RGB space.
-
-    Args:
-      color1: First RGB color
-      color2: Second RGB color
-
-    Returns:
-      Distance value (0-441, where 0 is identical)
-    """
-    return sum((a - b) ** 2 for a, b in zip(color1, color2)) ** 0.5
 
   def extract_dominant_colors(self, image: Image.Image, count: int = 5) -> List[Tuple]:
     """
@@ -90,8 +67,7 @@ class BrandComplianceValidator:
     img.thumbnail((150, 150))
 
     # Convert to RGB if needed
-    if img.mode != 'RGB':
-      img = img.convert('RGB')
+    img = ensure_rgb(img)
 
     # Use color quantization to reduce to a palette of distinct colors
     # This groups similar colors together instead of counting every pixel shade
@@ -141,14 +117,14 @@ class BrandComplianceValidator:
     matched_image_colors = set()
 
     for dom_color, percentage in dominant_colors:
-      dom_hex = self._rgb_to_hex(dom_color)
+      dom_hex = rgb_to_hex(dom_color)
 
       # Find best matching brand color for this image color
       best_match = None
       best_similarity = 0
 
       for brand_color in self.brand_colors:
-        distance = self._color_distance(dom_color, brand_color)
+        distance = color_distance(dom_color, brand_color)
         # Normalize distance to 0-100 scale
         similarity = max(0, 100 - (distance / 4.41))
 
@@ -156,7 +132,7 @@ class BrandComplianceValidator:
           best_similarity = similarity
           best_match = {
             "image_color": dom_hex,
-            "brand_color": self._rgb_to_hex(brand_color),
+            "brand_color": rgb_to_hex(brand_color),
             "similarity": round(similarity, 1),
             "coverage": percentage
           }
@@ -180,7 +156,7 @@ class BrandComplianceValidator:
       "checked": True,
       "compliant": compliant,
       "dominant_colors": [
-        {"color": self._rgb_to_hex(c), "coverage": p}
+        {"color": rgb_to_hex(c), "coverage": p}
         for c, p in dominant_colors
       ],
       "brand_matches": matches,
@@ -200,8 +176,7 @@ class BrandComplianceValidator:
     """
     # Basic implementation: check if image has good contrast areas
     with Image.open(image_path) as img:
-      if img.mode != 'RGB':
-        img = img.convert('RGB')
+      img = ensure_rgb(img)
 
       # Sample bottom portion where text usually is
       width, height = img.size

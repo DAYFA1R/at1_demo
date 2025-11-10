@@ -2,12 +2,12 @@
 AI-powered creative copywriting service using GPT-4.
 """
 
-import json
 from typing import Dict, List, Optional
 from openai import OpenAI
 import os
 
 from ..models.campaign import Product
+from ..utils.ai_utils import parse_json_response
 
 
 class CreativeCopywriter:
@@ -94,13 +94,8 @@ class CreativeCopywriter:
 
       # Parse JSON response
       content = response.choices[0].message.content
-      # Clean up markdown if present
-      if "```json" in content:
-        content = content.split("```json")[1].split("```")[0]
-      elif "```" in content:
-        content = content.split("```")[1].split("```")[0]
-
-      return json.loads(content.strip())
+      # Clean up markdown if present and parse JSON
+      return parse_json_response(content)
 
     except Exception as e:
       print(f"Warning: Persona analysis failed: {e}")
@@ -189,12 +184,7 @@ class CreativeCopywriter:
 
       # Parse response
       content = response.choices[0].message.content
-      if "```json" in content:
-        content = content.split("```json")[1].split("```")[0]
-      elif "```" in content:
-        content = content.split("```")[1].split("```")[0]
-
-      result = json.loads(content.strip())
+      result = parse_json_response(content)
 
       # Add metadata
       return {
@@ -279,12 +269,7 @@ class CreativeCopywriter:
       )
 
       content = response.choices[0].message.content
-      if "```json" in content:
-        content = content.split("```json")[1].split("```")[0]
-      elif "```" in content:
-        content = content.split("```")[1].split("```")[0]
-
-      result = json.loads(content.strip())
+      result = parse_json_response(content)
       return result.get("variants", [])
 
     except Exception as e:
@@ -354,12 +339,7 @@ class CreativeCopywriter:
       )
 
       content = response.choices[0].message.content
-      if "```json" in content:
-        content = content.split("```json")[1].split("```")[0]
-      elif "```" in content:
-        content = content.split("```")[1].split("```")[0]
-
-      result = json.loads(content.strip())
+      result = parse_json_response(content)
       return {
         "suggestions": result.get("translations", {}),
         "notes": result.get("notes", ""),

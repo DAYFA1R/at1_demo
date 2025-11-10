@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react';
 import './ProgressDashboard.css';
 
+// Helper function to format stage names
+const formatStage = (stage) => {
+  const stageMap = {
+    'initialization': '🚀 Initializing Campaign',
+    'copywriting': '✍️ Optimizing Message',
+    'moderation': '🔍 Content Moderation',
+    'products': '📦 Processing Products',
+    'asset_generation': '🎨 Generating Assets',
+    'variations': '📐 Creating Variations',
+    'compliance': '🎯 Brand Compliance Check'
+  };
+  return stageMap[stage] || stage;
+};
+
 export default function ProgressDashboard({ campaignId, onComplete }) {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -84,8 +98,27 @@ export default function ProgressDashboard({ campaignId, onComplete }) {
         {status.status === 'processing' && (
           <div className="processing-indicator">
             <div className="loader"></div>
-            <p>Generating assets with DALL-E and processing variations...</p>
-            <p className="note">This may take 1-2 minutes</p>
+            {status.latest_progress ? (
+              <div className="progress-update">
+                <p className="progress-stage">{formatStage(status.latest_progress.stage)}</p>
+                <p className="progress-message">{status.latest_progress.message}</p>
+                {status.latest_progress.current_product && (
+                  <p className="progress-details">
+                    Product {status.latest_progress.current_product} of {status.latest_progress.total_products}
+                  </p>
+                )}
+                {status.latest_progress.variations_created && (
+                  <p className="progress-details">
+                    {status.latest_progress.variations_created} variations created
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                <p>Generating assets with DALL-E and processing variations...</p>
+                <p className="note">This may take 1-2 minutes</p>
+              </>
+            )}
           </div>
         )}
 

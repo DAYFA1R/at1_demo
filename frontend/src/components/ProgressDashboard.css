@@ -119,6 +119,34 @@
   color: var(--text-secondary);
 }
 
+.progress-update {
+  margin-top: 1rem;
+}
+
+.progress-stage {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 10px rgba(5, 217, 232, 0.4);
+}
+
+.progress-message {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.progress-details {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  background: rgba(5, 217, 232, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  display: inline-block;
+  margin: 0.25rem;
+}
+
 .loader {
   border: 4px solid rgba(5, 217, 232, 0.2);
   border-top: 4px solid var(--neon-cyan);

@@ -496,10 +496,10 @@ class CreativeComposer:
 
         # Ease-out exponential curve for smooth, natural fade
         # Strongest at text edge, fades into image
-        fade = (1.0 - distance_from_edge) ** 2.5  # Exponential ease-out
+        fade = (1.0 - distance_from_edge) ** 2.0  # Exponential ease-out (reduced from 2.5 for longer fade)
 
-        # Very subtle max opacity (100 alpha = 39%)
-        alpha = int(fade * 100)
+        # Stronger gradient for better readability (150 alpha = 59%)
+        alpha = int(fade * 150)
 
         if alpha > 0:
           pixels[x, y] = (*scrim_color, alpha)

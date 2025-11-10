@@ -1,125 +1,60 @@
 """
 Image processing and composition for creating social media creatives.
+
+This module orchestrates specialized components to create professional social media
+creatives with text overlays, brand-compliant colors, and multi-language support.
 """
 
-import platform
 from pathlib import Path
 from typing import Tuple, Optional, Dict, List
-import textwrap
-from collections import Counter
 
-from PIL import Image, ImageDraw, ImageFont, ImageEnhance
+from PIL import Image, ImageDraw, ImageFont
 
 from ..models.campaign import AspectRatio
-from ..utils.color_utils import (
-    hex_to_rgb,
-    calculate_contrast_ratio,
-    relative_luminance
-)
 from ..utils.image_utils import ensure_rgb
+from .font_manager import FontManager
+from .text_layout_engine import TextLayoutEngine
+from .color_analyzer import ColorAnalyzer
+from .gradient_renderer import GradientRenderer
 
 
 class CreativeComposer:
-  """Handles image resizing, cropping, and text overlay for social creatives."""
+  """
+  Orchestrates image processing for creating social media creatives.
+
+  This class coordinates specialized components to produce professional-quality
+  social media images with text overlays, brand compliance, and accessibility.
+
+  Components:
+    - FontManager: Handles font discovery and loading
+    - TextLayoutEngine: Manages text positioning and wrapping
+    - ColorAnalyzer: Selects brand-compliant, accessible colors
+    - GradientRenderer: Creates professional gradient overlays
+
+  Examples:
+    >>> composer = CreativeComposer()
+    >>> image = Image.open('product.jpg')
+    >>> results = composer.create_variations(
+    ...     image,
+    ...     "Shop Now - 50% Off",
+    ...     output_dir=Path("./output"),
+    ...     product_name="Widget",
+    ...     brand_colors=["#FF6B35", "#004E89"]
+    ... )
+  """
 
   def __init__(self):
-    """Initialize the creative composer."""
-    self.font_path = self._find_font()
-
-  def _find_font(self, language_code: Optional[str] = None) -> Optional[str]:
     """
-    Find a suitable font for text overlays with international script support.
+    Initialize the creative composer with specialized components.
 
-    Searches platform-specific font directories, prioritizing fonts that support
-    Arabic, Hebrew, CJK, and other international scripts.
-
-    Args:
-      language_code: Optional language code (e.g., 'ar', 'he', 'zh') to prioritize specific fonts
-
-    Returns:
-      Path to font file if found, None to use PIL default
+    Sets up dependency injection for all specialized processors.
     """
-    system = platform.system()
+    # Initialize specialized components
+    self.font_manager = FontManager()
+    self.layout_engine = TextLayoutEngine()
+    self.color_analyzer = ColorAnalyzer(min_contrast_ratio=7.0)
+    self.gradient_renderer = GradientRenderer(max_alpha=150, fade_exponent=2.0)
 
-    # Check if we need international script support
-    needs_arabic = language_code and language_code.startswith(('ar', 'fa', 'ur'))
-    needs_hebrew = language_code and language_code.startswith('he')
-    needs_cjk = language_code and language_code.startswith(('zh', 'ja', 'ko'))
-
-    font_candidates = []
-
-    if system == "Darwin":  # macOS
-      # macOS fonts with international support
-      if needs_cjk:
-        if language_code and language_code.startswith('ko'):
-          # Korean-specific font
-          font_candidates.extend([
-            "/System/Library/Fonts/AppleSDGothicNeo.ttc",
-            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-          ])
-        else:
-          # Chinese and Japanese
-          font_candidates.extend([
-            "/System/Library/Fonts/Hiragino Sans GB.ttc",
-            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-          ])
-      if needs_arabic or needs_hebrew:
-        font_candidates.extend([
-          "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-          "/Library/Fonts/Arial.ttf",
-        ])
-      font_candidates.extend([
-        "/System/Library/Fonts/Helvetica.ttc",
-        "/System/Library/Fonts/SFNSDisplay.ttf",
-      ])
-    elif system == "Windows":
-      # Windows fonts with international support
-      if needs_arabic:
-        font_candidates.extend([
-          "C:/Windows/Fonts/arialuni.ttf",
-          "C:/Windows/Fonts/tahoma.ttf",
-        ])
-      if needs_hebrew:
-        font_candidates.extend([
-          "C:/Windows/Fonts/arialuni.ttf",
-          "C:/Windows/Fonts/arial.ttf",
-        ])
-      font_candidates.extend([
-        "C:/Windows/Fonts/arial.ttf",
-        "C:/Windows/Fonts/calibri.ttf",
-        "C:/Windows/Fonts/segoeui.ttf",
-      ])
-    else:  # Linux / Docker
-      # Noto fonts have excellent international support
-      if needs_arabic:
-        font_candidates.extend([
-          "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
-          "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
-        ])
-      if needs_hebrew:
-        font_candidates.extend([
-          "/usr/share/fonts/truetype/noto/NotoSansHebrew-Regular.ttf",
-        ])
-      if needs_cjk:
-        font_candidates.extend([
-          "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-          "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
-        ])
-
-      # General fonts with good Unicode coverage
-      font_candidates.extend([
-        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-      ])
-
-    for font in font_candidates:
-      if Path(font).exists():
-        return font
-
-    return None  # Will use PIL default
 
   def smart_crop(self, image: Image.Image, target_ratio: Tuple[int, int]) -> Image.Image:
     """
@@ -173,258 +108,44 @@ class CreativeComposer:
     """
     return image.resize(dimensions, Image.Resampling.LANCZOS)
 
-  def _is_light(self, rgb: Tuple[int, int, int]) -> bool:
-    """Check if a color is light based on luminance."""
-    return relative_luminance(rgb) > 0.5
-
-  def _is_dark(self, rgb: Tuple[int, int, int]) -> bool:
-    """Check if a color is dark based on luminance."""
-    return relative_luminance(rgb) <= 0.5
-
-  def _extract_text_region(self, image: Image.Image, position: str) -> Image.Image:
-    """Extract the region where text will be placed."""
-    width, height = image.size
-
-    if position == "bottom":
-      # Bottom 30% of image
-      region_height = int(height * 0.3)
-      return image.crop((0, height - region_height, width, height))
-    elif position == "top":
-      # Top 30% of image
-      region_height = int(height * 0.3)
-      return image.crop((0, 0, width, region_height))
-    else:  # center
-      # Middle 40% of image
-      region_height = int(height * 0.4)
-      top = int(height * 0.3)
-      return image.crop((0, top, width, top + region_height))
-
-  def analyze_text_region(self, image: Image.Image, position: str = None) -> Dict:
-    """
-    Analyze the image to find the best region for text placement.
-    If position is specified, analyzes that specific region.
-    Otherwise, finds the region with best natural contrast.
-    """
-    if position:
-      # Use specified position
-      text_region = self._extract_text_region(image, position)
-      region_position = position
-    else:
-      # Smart positioning: analyze multiple regions and pick the best
-      text_region, region_position = self._find_best_text_region(image)
-
-    # Convert to RGB if needed
-    text_region = ensure_rgb(text_region)
-
-    # Get dominant colors in that region
-    pixels = list(text_region.getdata())
-    avg_r = sum(p[0] for p in pixels) / len(pixels)
-    avg_g = sum(p[1] for p in pixels) / len(pixels)
-    avg_b = sum(p[2] for p in pixels) / len(pixels)
-
-    avg_color = (int(avg_r), int(avg_g), int(avg_b))
-    avg_luminance = self._relative_luminance(avg_color)
-
-    return {
-      "average_color": avg_color,
-      "luminance": avg_luminance,
-      "is_light": avg_luminance > 0.5,
-      "position": region_position
-    }
-
-  def _find_best_text_region(self, image: Image.Image) -> Tuple[Image.Image, str]:
-    """Find the region in the image with best contrast potential for text."""
-    width, height = image.size
-
-    # Define candidate regions to check
-    regions = {
-      "bottom-left": (0, int(height * 0.7), int(width * 0.4), height),
-      "bottom-right": (int(width * 0.6), int(height * 0.7), width, height),
-      "bottom-center": (int(width * 0.3), int(height * 0.7), int(width * 0.7), height),
-      "top-left": (0, 0, int(width * 0.4), int(height * 0.3)),
-      "top-right": (int(width * 0.6), 0, width, int(height * 0.3)),
-      "center": (int(width * 0.2), int(height * 0.4), int(width * 0.8), int(height * 0.6))
-    }
-
-    best_region = None
-    best_position = "bottom-center"
-    best_score = 0
-
-    for position, (x1, y1, x2, y2) in regions.items():
-      region = image.crop((x1, y1, x2, y2))
-      region = ensure_rgb(region)
-
-      # Calculate uniformity and luminance
-      pixels = list(region.getdata())
-      avg_r = sum(p[0] for p in pixels) / len(pixels)
-      avg_g = sum(p[1] for p in pixels) / len(pixels)
-      avg_b = sum(p[2] for p in pixels) / len(pixels)
-      avg_color = (int(avg_r), int(avg_g), int(avg_b))
-
-      # Calculate variance to measure uniformity (lower variance = more uniform = better for text)
-      variance_r = sum((p[0] - avg_r) ** 2 for p in pixels) / len(pixels)
-      variance_g = sum((p[1] - avg_g) ** 2 for p in pixels) / len(pixels)
-      variance_b = sum((p[2] - avg_b) ** 2 for p in pixels) / len(pixels)
-      total_variance = (variance_r + variance_g + variance_b) / 3
-
-      # Score: prefer uniform regions (lower variance) that aren't mid-tone
-      luminance = self._relative_luminance(avg_color)
-      # Prefer very light or very dark regions (good natural contrast)
-      contrast_potential = abs(luminance - 0.5) * 2  # 0 to 1, higher is better
-      uniformity_score = 1.0 / (1.0 + total_variance / 10000)  # Normalize variance
-
-      score = contrast_potential * 0.7 + uniformity_score * 0.3
-
-      if score > best_score:
-        best_score = score
-        best_region = region
-        best_position = position
-
-    return best_region, best_position
-
-  def select_text_colors(self, region_analysis: Dict,
-                        brand_colors: List[str]) -> Dict:
-    """Select text and outline colors that are brand-compliant and accessible."""
-
-    # Parse brand colors to RGB
-    brand_rgb = [hex_to_rgb(c) for c in brand_colors]
-    image_bg_color = region_analysis["average_color"]
-
-    # Separate light and dark brand colors
-    light_colors = [c for c in brand_rgb if self._is_light(c)]
-    dark_colors = [c for c in brand_rgb if self._is_dark(c)]
-
-    # Default fallbacks
-    white = (255, 255, 255)
-    black = (0, 0, 0)
-
-    # Determine which brand colors to use based on image background
-    if region_analysis["is_light"]:
-      # Light image background - need dark text
-      text_candidates = dark_colors or [black]
-      outline_candidates = light_colors or [white]
-    else:
-      # Dark image background - need light text
-      text_candidates = light_colors or [white]
-      outline_candidates = dark_colors or [black]
-
-    # Find best text color that contrasts with the actual image background
-    # Require higher contrast (7:1) for better readability in real-world ads
-    best_combo = None
-    best_ratio = 0
-    MIN_CONTRAST = 7.0  # Stricter than WCAG AA (4.5:1) for professional quality
-
-    for text_color in text_candidates:
-      # Test contrast between text and actual image background
-      ratio = calculate_contrast_ratio(text_color, image_bg_color)
-      if ratio >= MIN_CONTRAST and ratio > best_ratio:
-        best_ratio = ratio
-        # Choose outline color that contrasts with text
-        outline_color = None
-        for outline in outline_candidates:
-          outline_ratio = calculate_contrast_ratio(text_color, outline)
-          if outline_ratio >= 3.0:  # Lower threshold for outline
-            outline_color = outline
-            break
-
-        if not outline_color:
-          # Use opposite of text color as fallback
-          outline_color = white if self._is_dark(text_color) else black
-
-        best_combo = {
-          "text_color": text_color,
-          "bg_color": outline_color,  # Used for outline/stroke
-          "contrast_ratio": ratio
-        }
-
-    # If no brand colors meet strict contrast requirements, use white/black for maximum readability
-    # Scrim color should be opposite of text for maximum contrast
-    if not best_combo:
-      if region_analysis["is_light"]:
-        # Light background: black text with WHITE scrim (brightens already-light background)
-        best_combo = {
-          "text_color": black,
-          "bg_color": white,
-          "contrast_ratio": calculate_contrast_ratio(black, image_bg_color)
-        }
-      else:
-        # Dark background: white text with BLACK scrim (darkens already-dark background)
-        best_combo = {
-          "text_color": white,
-          "bg_color": black,
-          "contrast_ratio": calculate_contrast_ratio(white, image_bg_color)
-        }
-
-    return best_combo
-
-  def _wrap_text_to_width(self, text: str, font: ImageFont.FreeTypeFont,
-                          max_width: int, draw: ImageDraw.ImageDraw) -> str:
-    """
-    Wrap text to fit within a maximum pixel width.
-
-    This method properly handles all languages by measuring actual pixel width
-    instead of character count.
-
-    Args:
-      text: Text to wrap
-      font: Font to use for measurement
-      max_width: Maximum width in pixels
-      draw: ImageDraw context for text measurement
-
-    Returns:
-      Wrapped text with newlines
-    """
-    words = text.split()
-    lines = []
-    current_line = []
-
-    for word in words:
-      # Try adding this word to current line
-      test_line = ' '.join(current_line + [word])
-      bbox = draw.textbbox((0, 0), test_line, font=font)
-      line_width = bbox[2] - bbox[0]
-
-      if line_width <= max_width:
-        current_line.append(word)
-      else:
-        # Line is too long, start new line
-        if current_line:
-          lines.append(' '.join(current_line))
-          current_line = [word]
-        else:
-          # Single word is too long, add it anyway to avoid infinite loop
-          lines.append(word)
-          current_line = []
-
-    # Add remaining words
-    if current_line:
-      lines.append(' '.join(current_line))
-
-    return '\n'.join(lines)
-
   def add_text_overlay(self, image: Image.Image, message: str,
                        position: str = None, language_code: Optional[str] = None,
                        brand_colors: Optional[List[str]] = None) -> Image.Image:
     """
     Add brand-aware text overlay with smart positioning and clean typography.
 
+    Orchestrates the layout engine, color analyzer, font manager, and gradient
+    renderer to create professional text overlays.
+
     Args:
       image: Source image
       message: Text message to overlay
-      position: Position hint ("top", "bottom", "center"). If None and brand_colors provided, uses smart positioning
+      position: Position hint ("top", "bottom", "center"). If None and brand_colors
+               provided, uses smart positioning
       language_code: Optional language code for font selection (e.g., 'ar', 'he', 'zh')
       brand_colors: Optional list of brand colors in hex format for brand-aware text
 
     Returns:
       Image with text overlay
+
+    Examples:
+      >>> composer = CreativeComposer()
+      >>> img = Image.open('product.jpg')
+      >>> result = composer.add_text_overlay(
+      ...     img,
+      ...     "Shop Now",
+      ...     brand_colors=["#FF6B35", "#004E89"]
+      ... )
     """
     # Work on a copy
     img = image.copy().convert('RGBA')
 
-    # Smart positioning: analyze image to find best natural contrast area
+    # Step 1: Analyze text region and select colors using specialized components
     if brand_colors and len(brand_colors) > 0:
-      region_analysis = self.analyze_text_region(image, position)
-      colors = self.select_text_colors(region_analysis, brand_colors)
+      # Delegate to TextLayoutEngine for region analysis
+      region_analysis = self.layout_engine.analyze_text_region(image, position)
+      # Delegate to ColorAnalyzer for color selection
+      colors = self.color_analyzer.select_text_colors(region_analysis, brand_colors)
       # Use the smart position if no specific position was requested
       if not position:
         position = region_analysis["position"]
@@ -437,34 +158,14 @@ class CreativeComposer:
       }
       position = position or "bottom"
 
-    # Calculate font size based on image dimensions
+    # Step 2: Calculate font size and load appropriate font
     # Aim for readable text that scales with image size
     font_size = max(24, min(72, img.width // 15))
 
-    # Load font with language-specific support
-    try:
-      # Get language-specific font if provided
-      font_path = self._find_font(language_code) if language_code else self.font_path
-      if font_path:
-        font = ImageFont.truetype(font_path, font_size)
-      else:
-        # Try to find any available font as fallback
-        font_path = self._find_font()
-        if font_path:
-          font = ImageFont.truetype(font_path, font_size)
-        else:
-          # Last resort: use default font (but this won't support international characters)
-          font = ImageFont.load_default()
-    except Exception as e:
-      # If font loading fails, try the default font path
-      try:
-        if self.font_path:
-          font = ImageFont.truetype(self.font_path, font_size)
-        else:
-          font = ImageFont.load_default()
-      except Exception:
-        font = ImageFont.load_default()
+    # Delegate to FontManager for font loading
+    font = self.font_manager.load_font_with_fallback(font_size, language_code)
 
+    # Step 3: Wrap text and calculate dimensions
     # Create drawing context for measuring text
     draw = ImageDraw.Draw(img)
 
@@ -474,40 +175,30 @@ class CreativeComposer:
     # Calculate available width for text (leaving padding on both sides)
     max_text_width = img.width - (padding * 2)
 
-    # Wrap text to fit within available width using pixel-based wrapping
-    wrapped_text = self._wrap_text_to_width(message, font, max_text_width, draw)
+    # Delegate to TextLayoutEngine for text wrapping
+    wrapped_text = self.layout_engine.wrap_text(message, font, max_text_width, draw)
 
     # Get text bounding box
     bbox = draw.textbbox((0, 0), wrapped_text, font=font)
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
 
-    # If text is still too large, try reducing font size
+    # Step 4: Adjust font size if text is too large
     max_attempts = 3
     attempt = 0
     while (text_width > max_text_width or text_height > img.height - padding * 4) and attempt < max_attempts:
       font_size = int(font_size * 0.85)  # Reduce by 15%
-      try:
-        font_path = self._find_font(language_code) if language_code else self.font_path
-        if font_path:
-          font = ImageFont.truetype(font_path, font_size)
-        else:
-          # If no font path found, keep using the current font at smaller size
-          # Don't fallback to load_default() as it doesn't support international characters
-          break
-      except Exception:
-        # If font loading fails, keep the current font
-        break
+      # Reload font at smaller size
+      font = self.font_manager.load_font_with_fallback(font_size, language_code)
 
-      # Re-wrap with new font size (draw context is still valid)
-      wrapped_text = self._wrap_text_to_width(message, font, max_text_width, draw)
+      # Re-wrap with new font size
+      wrapped_text = self.layout_engine.wrap_text(message, font, max_text_width, draw)
       bbox = draw.textbbox((0, 0), wrapped_text, font=font)
       text_width = bbox[2] - bbox[0]
       text_height = bbox[3] - bbox[1]
       attempt += 1
 
-    # Calculate position based on smart positioning or specified position
-
+    # Step 5: Calculate text position
     # Map positions to coordinates
     if position in ["bottom", "bottom-center"]:
       text_x = (img.width - text_width) // 2
@@ -534,58 +225,20 @@ class CreativeComposer:
       text_x = (img.width - text_width) // 2
       text_y = img.height - text_height - padding * 2
 
-    # Create position-based directional gradient scrim (Netflix/streaming style)
-    overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    pixels = overlay.load()
-
-    # Determine scrim color (use contrasting color to text for backdrop)
-    # White text needs dark scrim, black text needs light scrim
-    # bg_color contains the contrasting brand color (or black/white fallback)
+    # Step 6: Create gradient overlay
+    # Delegate to GradientRenderer for creating the scrim
     scrim_color = colors["bg_color"]
-
-    # Determine gradient direction based on text position
-    # Calculate which edge the text is closest to
-    text_center_y = text_y + text_height // 2
-    text_center_x = text_x + text_width // 2
-
-    distance_to_top = text_center_y
-    distance_to_bottom = img.height - text_center_y
-    distance_to_left = text_center_x
-    distance_to_right = img.width - text_center_x
-
-    # Find the closest edge
-    min_distance = min(distance_to_top, distance_to_bottom, distance_to_left, distance_to_right)
-
-    # Create gradient from that edge across the entire image dimension
-    for y in range(img.height):
-      for x in range(img.width):
-        if min_distance == distance_to_top:
-          # Text at top - fade from top down
-          distance_from_edge = y / img.height
-        elif min_distance == distance_to_bottom:
-          # Text at bottom - fade from bottom up
-          distance_from_edge = (img.height - y) / img.height
-        elif min_distance == distance_to_left:
-          # Text at left - fade from left to right
-          distance_from_edge = x / img.width
-        else:
-          # Text at right - fade from right to left
-          distance_from_edge = (img.width - x) / img.width
-
-        # Ease-out exponential curve for smooth, natural fade
-        # Strongest at text edge, fades into image
-        fade = (1.0 - distance_from_edge) ** 2.0  # Exponential ease-out (reduced from 2.5 for longer fade)
-
-        # Stronger gradient for better readability (150 alpha = 59%)
-        alpha = int(fade * 150)
-
-        if alpha > 0:
-          pixels[x, y] = (*scrim_color, alpha)
+    overlay = self.gradient_renderer.create_directional_gradient(
+      image_size=img.size,
+      text_position=(text_x, text_y),
+      text_size=(text_width, text_height),
+      scrim_color=scrim_color
+    )
 
     # Composite gradient overlay
     img = Image.alpha_composite(img, overlay)
 
-    # Draw text on top of gradient scrim
+    # Step 7: Draw text on top of gradient scrim
     draw = ImageDraw.Draw(img)
     text_color_with_alpha = (*colors["text_color"], 255)
     draw.text((text_x, text_y), wrapped_text, fill=text_color_with_alpha, font=font)

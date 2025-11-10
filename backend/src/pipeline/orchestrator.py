@@ -143,6 +143,8 @@ class CampaignPipeline:
 
     # Step 2: Content moderation check
     print("🔍 Running content moderation...")
+    self._update_progress("moderation", "Checking content compliance...")
+
     moderation_result = self.content_moderator.check_campaign_message(
       brief.campaign_message,
       region=brief.target_region
@@ -155,6 +157,8 @@ class CampaignPipeline:
       for violation in moderation_result["violations"]:
         print(f"   - {violation['type']}: {violation.get('word', violation.get('term', 'unknown'))}")
       self.report_data["errors"].append(error_msg)
+
+      self._update_progress("moderation", "Content moderation failed", {"error": error_msg})
 
       # Create campaign output dir before generating report
       campaign_output = self.output_dir / brief.campaign_id
@@ -170,6 +174,7 @@ class CampaignPipeline:
         self.report_data["warnings"].append(warn_msg)
 
     print(f"✓ Content approved (Risk: {moderation_result['risk_level']})\n")
+    self._update_progress("moderation", "Content approved", {"risk_level": moderation_result['risk_level']})
 
     # Step 3: Initialize brand validator
     if brief.brand_colors:
@@ -186,6 +191,16 @@ class CampaignPipeline:
     for idx, product in enumerate(brief.products, 1):
       print(f"\n[{idx}/{len(brief.products)}] Processing: {product.name}")
       print(f"{'─'*70}")
+
+      self._update_progress(
+        "products",
+        f"Processing product {idx} of {len(brief.products)}: {product.name}",
+        {
+          "current_product": idx,
+          "total_products": len(brief.products),
+          "product_name": product.name
+        }
+      )
 
       try:
         self._process_product(product, brief, campaign_output)
@@ -244,6 +259,17 @@ class CampaignPipeline:
         messages.update(localizations["suggestions"])
         print(f"  🌍 Creating variations for {len(messages)} languages...")
 
+    # Progress update for variations
+    self._update_progress(
+      "variations",
+      f"Creating {len(messages)} language variations with 3 aspect ratios each",
+      {
+        "product_name": product.name,
+        "languages": len(messages),
+        "aspects": 3  # 1x1, 9x16, 16x9
+      }
+    )
+
     with Image.open(asset_path) as img:
       if img.mode != 'RGB':
         img = img.convert('RGB')
@@ -272,10 +298,24 @@ class CampaignPipeline:
         )
         all_variations = {"en": variations}
 
+    # Progress update for variations complete
+    total_variations = sum(len(v) for v in all_variations.values())
+    self._update_progress(
+      "variations",
+      f"Created {total_variations} variations for {product.name}",
+      {
+        "product_name": product.name,
+        "variations_created": total_variations,
+        "languages": list(all_variations.keys())
+      }
+    )
+
     # Step 3: Brand compliance check
     compliance_results = {}
     if self.brand_validator:
       print(f"\n🎨 Checking brand compliance...")
+      self._update_progress("compliance", f"Validating brand compliance for {product.name}...")
+
       for name, path in variations.items():
         compliance = self.brand_validator.validate_creative(path)
         compliance_results[name] = compliance
@@ -327,10 +367,20 @@ class CampaignPipeline:
     if asset_path:
       print(f"📁 Using existing asset")
       self.report_data["assets_reused"] += 1
+      self._update_progress(
+        "asset_generation",
+        f"Using existing asset for {product.name}",
+        {"product_name": product.name, "source": "existing"}
+      )
       return asset_path
 
     # Generate new asset
     print(f"🎨 No existing asset found - generating with DALL-E...")
+    self._update_progress(
+      "asset_generation",
+      f"Generating new asset for {product.name} with DALL-E",
+      {"product_name": product.name, "source": "dalle"}
+    )
 
     image_data = self.image_generator.generate_for_product(product, brief)
 
@@ -345,6 +395,11 @@ class CampaignPipeline:
     )
 
     self.report_data["assets_generated"] += 1
+    self._update_progress(
+      "asset_generation",
+      f"Asset generated and saved for {product.name}",
+      {"product_name": product.name, "path": str(generated_path)}
+    )
     return generated_path
 
   def _generate_report(self, output_dir: Path, brief: CampaignBrief) -> None:

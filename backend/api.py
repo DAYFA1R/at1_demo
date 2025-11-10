@@ -49,6 +49,9 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 # In-memory storage for campaign status (POC only)
 campaign_store: Dict[str, Dict[str, Any]] = {}
 
+# In-memory storage for campaign progress updates (POC only)
+progress_store: Dict[str, list] = {}
+
 
 # Pydantic models for API
 class ProductInput(BaseModel):

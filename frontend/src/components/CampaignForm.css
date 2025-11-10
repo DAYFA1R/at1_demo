@@ -1,0 +1,144 @@
+.campaign-form {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.campaign-form h2 {
+  margin-top: 0;
+  color: #333;
+  font-size: 2rem;
+}
+
+.form-section {
+  margin: 2rem 0;
+}
+
+.form-section h3 {
+  color: #555;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.product-input {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.product-header h4 {
+  margin: 0;
+  color: #666;
+}
+
+.remove-btn {
+  background: #ff3b30;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.remove-btn:hover {
+  background: #e02814;
+}
+
+.product-input input,
+.product-input textarea {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.product-input textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.add-btn {
+  background: #007aff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.add-btn:hover {
+  background: #0051d5;
+}
+
+label {
+  display: block;
+  margin-bottom: 1.5rem;
+  color: #333;
+  font-weight: 500;
+}
+
+label input,
+label textarea,
+label select {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+label textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-label input {
+  width: auto;
+  margin: 0;
+}
+
+.submit-btn {
+  width: 100%;
+  background: #34c759;
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.125rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.submit-btn:hover {
+  background: #2fb84b;
+}
+
+.submit-btn:active {
+  transform: scale(0.98);
+}

@@ -351,14 +351,17 @@ class CreativeComposer:
         }
 
     # If no brand colors meet strict contrast requirements, use white/black for maximum readability
+    # Scrim color should be opposite of text for maximum contrast
     if not best_combo:
       if region_analysis["is_light"]:
+        # Light background: black text with WHITE scrim (brightens already-light background)
         best_combo = {
           "text_color": black,
           "bg_color": white,
           "contrast_ratio": self.calculate_contrast_ratio(black, image_bg_color)
         }
       else:
+        # Dark background: white text with BLACK scrim (darkens already-dark background)
         best_combo = {
           "text_color": white,
           "bg_color": black,
@@ -462,7 +465,9 @@ class CreativeComposer:
     overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
     pixels = overlay.load()
 
-    # Determine scrim color (use bg_color which is the contrasting brand color)
+    # Determine scrim color (use contrasting color to text for backdrop)
+    # White text needs dark scrim, black text needs light scrim
+    # bg_color contains the contrasting brand color (or black/white fallback)
     scrim_color = colors["bg_color"]
 
     # Determine gradient direction based on text position

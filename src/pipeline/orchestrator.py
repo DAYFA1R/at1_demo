@@ -190,16 +190,42 @@ class CampaignPipeline:
 
     product_output = output_dir / product.get_safe_name()
 
+    # Prepare messages for localization
+    messages = {"en": brief.campaign_message}  # Default English
+
+    # Add localizations if available from copywriting
+    if self.copywriter and "copywriting" in self.report_data:
+      localizations = self.report_data["copywriting"].get("localizations", {})
+      if localizations and "suggestions" in localizations:
+        # Add localized messages
+        messages.update(localizations["suggestions"])
+        print(f"  🌍 Creating variations for {len(messages)} languages...")
+
     with Image.open(asset_path) as img:
       if img.mode != 'RGB':
         img = img.convert('RGB')
 
-      variations = self.composer.create_variations(
-        img,
-        brief.campaign_message,
-        product_output,
-        product.name
-      )
+      # Check if we have localizations
+      if len(messages) > 1:
+        # Create localized variations
+        all_variations = self.composer.create_localized_variations(
+          img,
+          messages,
+          product_output,
+          product.name
+        )
+        # Flatten for backward compatibility (use English for compliance check)
+        variations = all_variations.get("en", {})
+      else:
+        # Single language - use original method but put in 'en' folder
+        en_output = product_output / "en"
+        variations = self.composer.create_variations(
+          img,
+          brief.campaign_message,
+          en_output,
+          product.name
+        )
+        all_variations = {"en": variations}
 
     # Step 3: Brand compliance check
     compliance_results = {}
@@ -217,12 +243,16 @@ class CampaignPipeline:
           print(f"  ✓ {name}: {compliance['summary']} (Score: {compliance['overall_score']})")
 
     # Track results
-    self.report_data["variations_created"] += len(variations)
+    total_variations = sum(len(v) for v in all_variations.values())
+    self.report_data["variations_created"] += total_variations
+
     product_data = {
       "name": product.name,
       "source": "existing" if product.has_existing_assets() else "generated",
       "variations": list(variations.keys()),
-      "output_path": str(product_output)
+      "output_path": str(product_output),
+      "languages": list(all_variations.keys()),
+      "total_files": total_variations
     }
 
     if compliance_results:

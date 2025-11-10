@@ -44,9 +44,36 @@ class ImageGenerator:
     self._last_request_time = 0
     self._min_request_interval = 2  # seconds between requests
 
+  def _rgb_to_hsl(self, r: int, g: int, b: int) -> tuple:
+    """Convert RGB to HSL color space."""
+    r, g, b = r / 255.0, g / 255.0, b / 255.0
+    max_val = max(r, g, b)
+    min_val = min(r, g, b)
+    diff = max_val - min_val
+
+    # Lightness
+    l = (max_val + min_val) / 2.0
+
+    if diff == 0:
+      h = s = 0  # achromatic
+    else:
+      # Saturation
+      s = diff / (2.0 - max_val - min_val) if l > 0.5 else diff / (max_val + min_val)
+
+      # Hue
+      if max_val == r:
+        h = ((g - b) / diff + (6 if g < b else 0)) / 6.0
+      elif max_val == g:
+        h = ((b - r) / diff + 2) / 6.0
+      else:
+        h = ((r - g) / diff + 4) / 6.0
+
+    return h * 360, s * 100, l * 100
+
   def _hex_to_color_name(self, hex_color: str) -> str:
     """
     Convert hex color to descriptive color name for better DALL-E understanding.
+    Uses HSL color space for robust color categorization.
 
     Args:
       hex_color: Hex color code (e.g., "#FF0000")
@@ -63,85 +90,88 @@ class ImageGenerator:
       g = int(hex_color[2:4], 16)
       b = int(hex_color[4:6], 16)
 
-      # Basic color name mapping based on dominant channel
-      max_val = max(r, g, b)
-      min_val = min(r, g, b)
+      # Convert to HSL for better color categorization
+      h, s, l = self._rgb_to_hsl(r, g, b)
 
-      # Check for grayscale
-      if max_val - min_val < 30:
-        if max_val < 50:
+      # Handle achromatic colors (low saturation)
+      if s < 10:
+        if l < 10:
           return "black"
-        elif max_val < 130:
+        elif l < 25:
+          return "very dark gray"
+        elif l < 45:
           return "dark gray"
-        elif max_val < 200:
+        elif l < 65:
           return "gray"
+        elif l < 85:
+          return "light gray"
         else:
           return "white"
 
-      # Calculate color characteristics
-      saturation = (max_val - min_val) / max_val if max_val > 0 else 0
-      brightness = max_val / 255.0
-
-      # Detect specific color families
-
-      # Pink: high red, significant blue, lower green
-      if r > 180 and b > 100 and b > g and r > b:
-        if brightness > 0.8:
-          return "hot pink"
-        return "pink"
-
-      # Yellow: high red and green, low blue
-      if r > 200 and g > 180 and b < 150 and min(r, g) > b:
-        if g > 220 and r > 220:
-          return "bright yellow"
-        return "golden yellow"
-
-      # Orange: red > green > blue
-      if r > g > b and g > 100 and r > 180:
-        return "orange"
-
-      # Purple/Magenta: high red and blue, lower green
-      if r > 150 and b > 150 and r > g and b > g:
-        if r > b + 30:
-          return "magenta"
-        elif b > r + 30:
-          return "purple"
-        return "violet"
-
-      # Cyan/Teal: high green and blue, lower red
-      if g > 150 and b > 150 and g > r and b > r:
-        if g > b + 30:
-          return "cyan"
-        elif b > g + 30:
-          return "teal"
-        return "turquoise"
-
-      # Red: dominant red channel
-      if r > g and r > b:
-        if saturation > 0.6 and brightness > 0.6:
-          return "red"
-        elif brightness < 0.4:
-          return "dark red"
-        return "red"
-
-      # Green: dominant green channel
-      elif g > r and g > b:
-        if saturation > 0.6 and brightness > 0.6:
-          return "green"
-        elif brightness < 0.4:
-          return "dark green"
-        return "green"
-
-      # Blue: dominant blue channel
-      elif b > r and b > g:
-        if saturation > 0.6 and brightness > 0.6:
-          return "blue"
-        elif brightness < 0.4:
-          return "dark blue"
-        return "blue"
-
+      # Determine base color from hue
+      # Hue wheel: Red=0, Orange=30, Yellow=60, Green=120, Cyan=180, Blue=240, Magenta=300
+      if h < 15 or h >= 345:
+        base_color = "red"
+      elif h < 45:
+        base_color = "orange"
+      elif h < 75:
+        base_color = "yellow"
+      elif h < 150:
+        base_color = "green"
+      elif h < 200:
+        base_color = "cyan"
+      elif h < 245:
+        base_color = "blue"
+      elif h < 290:
+        base_color = "purple"
+      elif h < 320:
+        base_color = "magenta"
       else:
-        return "mixed color"
+        base_color = "pink"
+
+      # Add modifiers based on saturation and lightness
+      modifiers = []
+
+      # Lightness modifiers
+      if l < 20:
+        modifiers.append("very dark")
+      elif l < 35:
+        modifiers.append("dark")
+      elif l > 80:
+        modifiers.append("very light")
+      elif l > 65:
+        modifiers.append("light")
+
+      # Saturation modifiers (for mid-range lightness)
+      if 30 < l < 70 and s > 80:
+        modifiers.append("vibrant")
+
+      # Special cases for better DALL-E understanding
+      if base_color == "pink" and l > 60 and s > 70:
+        base_color = "hot pink"
+        modifiers = []
+      elif base_color == "yellow":
+        if l > 70:
+          base_color = "golden"
+          modifiers = []
+        elif 40 < l < 70:
+          base_color = "golden yellow"
+          modifiers = [m for m in modifiers if "dark" not in m]
+      elif base_color == "orange":
+        if 35 < h < 65 and l > 60:
+          base_color = "golden"
+          modifiers = []
+        elif s > 60 and l < 50:
+          base_color = "burnt orange"
+          modifiers = []
+      elif base_color == "cyan" and h < 180:
+        base_color = "teal"
+
+      # Combine modifiers with base color
+      if modifiers:
+        return " ".join(modifiers) + " " + base_color
+      return base_color
+
     except:
       return hex_color
 

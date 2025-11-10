@@ -224,7 +224,15 @@ export default function AssetGallery({ campaignId, reportData }) {
                           <div className="check-details">
                             <div><strong>Summary:</strong> {check.summary}</div>
                             {check.checks?.colors && (
-                              <div>• <strong>Brand Colors:</strong> {check.checks.colors.reason || (check.checks.colors.checked ? '✓' : '✗')}</div>
+                              <div>
+                                • <strong>Brand Colors:</strong> {
+                                  check.checks.colors.reason
+                                    ? check.checks.colors.reason
+                                    : check.checks.colors.compliant
+                                      ? `✓ ${check.checks.colors.brand_color_coverage}% coverage`
+                                      : `✗ Only ${check.checks.colors.brand_color_coverage}% coverage (needs ≥20%)`
+                                }
+                              </div>
                             )}
                             {check.checks?.readability && (
                               <div>

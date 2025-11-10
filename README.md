@@ -104,6 +104,7 @@ campaign_message: Fuel your journey with natural energy
 
 ## Features
 
+### Core Features
 - **Multi-product support** - Process 2+ products per campaign
 - **Asset management** - Reuse existing assets or generate new ones with DALL-E
 - **Multiple formats** - Create 3 aspect ratios (1:1, 9:16, 16:9)
@@ -112,12 +113,42 @@ campaign_message: Fuel your journey with natural energy
 - **JSON/YAML support** - Flexible campaign brief formats
 - **Detailed reporting** - JSON reports with processing statistics
 
+### Quality & Compliance
+- **Content moderation** - Automatically checks campaign messages for prohibited words and regulated terms
+- **Brand compliance** - Validates generated creatives against brand color palette and readability standards
+- **Risk assessment** - Categorizes content as low/medium/high risk
+- **Compliance scoring** - Scores each creative 0-100 for brand alignment
+
+## Content Moderation & Brand Compliance
+
+The pipeline automatically validates all campaigns for quality and compliance:
+
+**Content Moderation:**
+- Checks campaign messages before generation
+- Blocks prohibited words (e.g., "guaranteed", "miracle", "no-risk")
+- Warns on regulated terms requiring disclaimers (e.g., health claims, superlatives)
+- Stops pipeline if violations detected, saving API costs
+
+**Brand Compliance:**
+- Validates brand color usage in generated creatives
+- Checks text readability and contrast
+- Scores each creative 0-100 for compliance
+- Provides actionable feedback in reports
+
+To enable brand compliance, include `brand_colors` in your campaign brief:
+```json
+{
+  "brand_colors": ["#2E7D32", "#FFFFFF"],
+  "logo_path": "assets/brand/logo.png"
+}
+```
+
 ## Output Structure
 
 ```
 output/
 └── {campaign_id}/
-    ├── campaign_report.json
+    ├── campaign_report.json        # Includes moderation & compliance data
     ├── {product_1}/
     │   ├── 1x1.jpg
     │   ├── 9x16.jpg
@@ -138,5 +169,8 @@ output/
 - **Asset reuse first**: Always checks for existing assets before generating
 - **Smart cropping**: Center-based cropping maintains focal points across ratios
 - **Rate limiting**: Built-in delays to respect API limits
+- **Validate early**: Content moderation runs before generation to catch issues early
+- **Quality gates**: Brand compliance scoring ensures consistent output
 - **Error resilience**: Continues processing even if individual products fail
 - **Organized output**: Clear directory structure by campaign and product
+- **Audit trail**: All validations tracked in detailed JSON reports

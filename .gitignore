@@ -41,6 +41,10 @@ output/
 *.log
 pipeline.log
 
+# Frontend
+node_modules/
+dist/
+
 # OS
 .DS_Store
 Thumbs.db

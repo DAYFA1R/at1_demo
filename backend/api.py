@@ -229,6 +229,12 @@ async def get_campaign_assets(campaign_id: str):
 
   # Build asset list from output directory
   output_path = Path(campaign_data["output_path"])
+
+  # Handle nested campaign directory structure
+  nested_campaign_dir = output_path / campaign_id
+  if nested_campaign_dir.exists() and nested_campaign_dir.is_dir():
+    output_path = nested_campaign_dir
+
   assets = []
 
   # Scan directory for generated images
@@ -270,6 +276,12 @@ async def get_asset_file(campaign_id: str, product: str, language: str, filename
     raise HTTPException(status_code=404, detail="Campaign not found")
 
   output_path = Path(campaign_store[campaign_id]["output_path"])
+
+  # Handle nested campaign directory structure
+  nested_campaign_dir = output_path / campaign_id
+  if nested_campaign_dir.exists() and nested_campaign_dir.is_dir():
+    output_path = nested_campaign_dir
+
   file_path = output_path / product / language / filename
 
   if not file_path.exists():
@@ -285,6 +297,12 @@ async def get_asset_file_no_lang(campaign_id: str, product: str, filename: str):
     raise HTTPException(status_code=404, detail="Campaign not found")
 
   output_path = Path(campaign_store[campaign_id]["output_path"])
+
+  # Handle nested campaign directory structure
+  nested_campaign_dir = output_path / campaign_id
+  if nested_campaign_dir.exists() and nested_campaign_dir.is_dir():
+    output_path = nested_campaign_dir
+
   file_path = output_path / product / filename
 
   if not file_path.exists():

@@ -1,35 +1,62 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import CampaignForm from './components/CampaignForm';
+import ProgressDashboard from './components/ProgressDashboard';
+import AssetGallery from './components/AssetGallery';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [view, setView] = useState('form'); // 'form', 'processing', 'gallery'
+  const [campaignId, setCampaignId] = useState(null);
+  const [reportData, setReportData] = useState(null);
+
+  const handleFormSubmit = async (formData) => {
+    try {
+      const response = await fetch('/api/campaigns/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+      setCampaignId(data.campaign_id);
+      setView('processing');
+    } catch (error) {
+      console.error('Failed to create campaign:', error);
+      alert('Failed to create campaign. Please try again.');
+    }
+  };
+
+  const handleProcessingComplete = (statusData) => {
+    setReportData(statusData.report);
+    setView('gallery');
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="app">
+      <header className="app-header">
+        <h1>🎨 Creative Automation Pipeline</h1>
+        <p>AI-powered social campaign asset generation</p>
+      </header>
+
+      <main className="app-main">
+        {view === 'form' && <CampaignForm onSubmit={handleFormSubmit} />}
+
+        {view === 'processing' && (
+          <ProgressDashboard campaignId={campaignId} onComplete={handleProcessingComplete} />
+        )}
+
+        {view === 'gallery' && (
+          <AssetGallery campaignId={campaignId} reportData={reportData} />
+        )}
+      </main>
+
+      <footer className="app-footer">
+        <p>Powered by DALL-E 3 & GPT-4</p>
+      </footer>
+    </div>
+  );
 }
 
-export default App
+export default App;

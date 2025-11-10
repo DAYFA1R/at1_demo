@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from dotenv import load_dotenv
 
 from src.models.campaign import CampaignBrief, Product
@@ -47,12 +47,16 @@ campaign_store: Dict[str, Dict[str, Any]] = {}
 
 # Pydantic models for API
 class ProductInput(BaseModel):
+  model_config = ConfigDict(extra='ignore')
+
   name: str = Field(..., description="Product name")
   description: str = Field(..., description="Product description")
   existing_assets: list[str] = Field(default_factory=list, description="Paths to existing assets")
 
 
 class CampaignInput(BaseModel):
+  model_config = ConfigDict(extra='ignore')
+
   products: list[ProductInput] = Field(..., min_length=2, description="List of products (minimum 2)")
   target_region: str = Field(..., description="Target geographic region")
   target_audience: str = Field(..., description="Target audience description")

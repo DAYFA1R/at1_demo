@@ -50,9 +50,17 @@ export default function CampaignForm({ onSubmit }) {
               currentProduct.description = trimmed.split(':')[1].trim();
             } else if (!trimmed.startsWith('-') && trimmed.includes(':')) {
               const [key, ...valueParts] = trimmed.split(':');
-              const value = valueParts.join(':').trim();
+              let value = valueParts.join(':').trim();
+
+              // Parse value types
               if (key === 'brand_colors') {
                 data[key] = value ? value.replace(/[\[\]]/g, '').split(',').map(c => c.trim()) : [];
+              } else if (value === 'true') {
+                data[key] = true;
+              } else if (value === 'false') {
+                data[key] = false;
+              } else if (value && !isNaN(value)) {
+                data[key] = Number(value);
               } else {
                 data[key] = value;
               }

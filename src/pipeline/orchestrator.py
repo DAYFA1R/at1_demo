@@ -15,20 +15,23 @@ from ..services.image_generator import ImageGenerator
 from ..processors.creative_composer import CreativeComposer
 from ..validators.content_moderator import ContentModerator
 from ..validators.brand_compliance import BrandComplianceValidator
+from ..services.creative_copywriter import CreativeCopywriter
 
 
 class CampaignPipeline:
   """Orchestrates the entire campaign creative generation process."""
 
-  def __init__(self, output_dir: str = "./output"):
+  def __init__(self, output_dir: str = "./output", enable_copywriting: bool = True):
     """
     Initialize the campaign pipeline.
 
     Args:
       output_dir: Base directory for output files
+      enable_copywriting: Enable AI copywriting optimization
     """
     self.output_dir = Path(output_dir)
     self.output_dir.mkdir(parents=True, exist_ok=True)
+    self.enable_copywriting = enable_copywriting
 
     # Initialize services
     self.asset_manager = AssetManager()
@@ -36,6 +39,7 @@ class CampaignPipeline:
     self.composer = CreativeComposer()
     self.content_moderator = ContentModerator()
     self.brand_validator = None  # Initialized per campaign with brand colors
+    self.copywriter = CreativeCopywriter() if enable_copywriting else None
 
     # Report data for tracking
     self.report_data = {

@@ -281,14 +281,16 @@ Manages storage and retrieval of both user-uploaded and AI-generated images.
 #### Creative Composer
 **File**: `backend/src/processors/creative_composer.py`
 
-Transforms source images into social media-ready creatives with multiple aspect ratios and text overlays.
+Transforms source images into design-ready advertising creatives with brand-aware text overlays, smart positioning, and smooth gradient scrims.
 
 **Key Features**:
-- Smart center-based cropping to maintain focal points
-- High-quality LANCZOS resampling
-- International font support (Arabic, Hebrew, CJK)
-- Multi-language text rendering with appropriate fonts
-- Semi-transparent text backgrounds for readability
+- **Smart Positioning Algorithm**: Analyzes 6 candidate regions to find optimal text placement based on uniformity and contrast
+- **Brand-Aware Text Colors**: Uses campaign brand colors with WCAG AAA (7:1) contrast compliance
+- **Edge-Based Gradient Scrims**: Smooth directional vignettes (Netflix/Apple TV+ style) that fade from edge to transparent
+- **WCAG Compliance**: Calculates relative luminance and contrast ratios per accessibility guidelines
+- **International Font Support**: Arabic, Hebrew, CJK languages with appropriate font selection
+- **Smart Center Cropping**: Maintains focal points across aspect ratios
+- **High-Quality Resampling**: LANCZOS algorithm for professional image quality
 
 **Supported Aspect Ratios**:
 - **1:1 (Square)**: 1080x1080 - Instagram feed, Facebook
@@ -297,9 +299,12 @@ Transforms source images into social media-ready creatives with multiple aspect 
 
 **Key Methods**:
 - `smart_crop(image, target_ratio)` - Intelligent center cropping
-- `add_text_overlay(image, message, position, language_code)` - Text rendering with language-specific fonts
-- `create_variations(source_image, message, output_dir, product_name)` - Generate all aspect ratios
-- `create_localized_variations(source_image, messages, output_dir, product_name)` - Multi-language variations
+- `_find_best_text_region(image)` - Analyzes 6 regions to find optimal text placement
+- `calculate_contrast_ratio(color1, color2)` - WCAG contrast calculation
+- `select_text_colors(region_analysis, brand_colors)` - Brand-aware color selection with 7:1 threshold
+- `add_text_overlay(image, message, position, language_code, brand_colors)` - Brand-aware text with gradient scrim
+- `create_variations(source_image, message, output_dir, product_name, brand_colors)` - Generate all aspect ratios
+- `create_localized_variations(source_image, messages, output_dir, product_name, brand_colors)` - Multi-language variations
 
 ---
 

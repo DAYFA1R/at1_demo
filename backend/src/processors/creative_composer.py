@@ -82,7 +82,8 @@ class CreativeComposer:
         ])
       if needs_cjk:
         font_candidates.extend([
-          "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+          "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+          "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
         ])
 
       # General fonts with good Unicode coverage

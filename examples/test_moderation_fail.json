@@ -1,0 +1,20 @@
+{
+  "campaign_id": "test_moderation",
+  "products": [
+    {
+      "name": "Health Supplement",
+      "description": "Natural vitamins",
+      "existing_assets": []
+    },
+    {
+      "name": "Wellness Product",
+      "description": "Organic ingredients",
+      "existing_assets": []
+    }
+  ],
+  "target_region": "North America",
+  "target_audience": "Health enthusiasts",
+  "campaign_message": "Guaranteed miracle cure with no-risk results!",
+  "brand_colors": ["#00FF00"],
+  "logo_path": null
+}

@@ -13,6 +13,8 @@ from ..models.campaign import CampaignBrief, Product
 from ..services.asset_manager import AssetManager
 from ..services.image_generator import ImageGenerator
 from ..processors.creative_composer import CreativeComposer
+from ..validators.content_moderator import ContentModerator
+from ..validators.brand_compliance import BrandComplianceValidator
 
 
 class CampaignPipeline:
@@ -32,6 +34,8 @@ class CampaignPipeline:
     self.asset_manager = AssetManager()
     self.image_generator = ImageGenerator()
     self.composer = CreativeComposer()
+    self.content_moderator = ContentModerator()
+    self.brand_validator = None  # Initialized per campaign with brand colors
 
     # Report data for tracking
     self.report_data = {
@@ -40,7 +44,10 @@ class CampaignPipeline:
       "assets_generated": 0,
       "assets_reused": 0,
       "variations_created": 0,
-      "errors": []
+      "errors": [],
+      "warnings": [],
+      "content_moderation": {},
+      "compliance_summary": {}
     }
 
   def process_campaign(self, brief: CampaignBrief) -> Dict[str, Any]:
@@ -61,6 +68,44 @@ class CampaignPipeline:
     print(f"Target Audience: {brief.target_audience}")
     print(f"Campaign Message: {brief.campaign_message}")
     print(f"Products: {brief.get_product_count()}\n")
+
+    # Step 1: Content moderation check
+    print("🔍 Running content moderation...")
+    moderation_result = self.content_moderator.check_campaign_message(
+      brief.campaign_message,
+      region=brief.target_region
+    )
+    self.report_data["content_moderation"] = moderation_result
+
+    if not moderation_result["approved"]:
+      error_msg = f"Content moderation failed: {len(moderation_result['violations'])} violations"
+      print(f"❌ {error_msg}")
+      for violation in moderation_result["violations"]:
+        print(f"   - {violation['type']}: {violation.get('word', violation.get('term', 'unknown'))}")
+      self.report_data["errors"].append(error_msg)
+
+      # Create campaign output dir before generating report
+      campaign_output = self.output_dir / brief.campaign_id
+      campaign_output.mkdir(parents=True, exist_ok=True)
+      self._generate_report(campaign_output, brief)
+      return self.report_data
+
+    if moderation_result["warnings"]:
+      print(f"⚠️  Content warnings: {len(moderation_result['warnings'])}")
+      for warning in moderation_result["warnings"]:
+        warn_msg = f"{warning['category']}: {warning['term']}"
+        print(f"   - {warn_msg}")
+        self.report_data["warnings"].append(warn_msg)
+
+    print(f"✓ Content approved (Risk: {moderation_result['risk_level']})\n")
+
+    # Step 2: Initialize brand validator
+    if brief.brand_colors:
+      self.brand_validator = BrandComplianceValidator(
+        brand_colors=brief.brand_colors,
+        logo_path=brief.logo_path
+      )
+      print(f"✓ Brand compliance checking enabled\n")
 
     campaign_output = self.output_dir / brief.campaign_id
     campaign_output.mkdir(parents=True, exist_ok=True)
@@ -116,14 +161,34 @@ class CampaignPipeline:
         product.name
       )
 
+    # Step 3: Brand compliance check
+    compliance_results = {}
+    if self.brand_validator:
+      print(f"\n🎨 Checking brand compliance...")
+      for name, path in variations.items():
+        compliance = self.brand_validator.validate_creative(path)
+        compliance_results[name] = compliance
+
+        if compliance["overall_score"] < 70:
+          warn_msg = f"{product.name}/{name}: Low compliance score {compliance['overall_score']}"
+          self.report_data["warnings"].append(warn_msg)
+          print(f"  ⚠️  {name}: {compliance['summary']} (Score: {compliance['overall_score']})")
+        else:
+          print(f"  ✓ {name}: {compliance['summary']} (Score: {compliance['overall_score']})")
+
     # Track results
     self.report_data["variations_created"] += len(variations)
-    self.report_data["products_processed"].append({
+    product_data = {
       "name": product.name,
       "source": "existing" if product.has_existing_assets() else "generated",
       "variations": list(variations.keys()),
       "output_path": str(product_output)
-    })
+    }
+
+    if compliance_results:
+      product_data["compliance"] = compliance_results
+
+    self.report_data["products_processed"].append(product_data)
 
     print(f"\n✅ Completed {product.name}")
 
@@ -187,6 +252,23 @@ class CampaignPipeline:
     total_products = len(self.report_data["products_processed"])
     successful_products = total_products - len(self.report_data["errors"])
 
+    # Calculate compliance summary
+    if self.brand_validator:
+      compliance_scores = []
+      for product in self.report_data["products_processed"]:
+        if "compliance" in product:
+          for ratio_compliance in product["compliance"].values():
+            compliance_scores.append(ratio_compliance["overall_score"])
+
+      if compliance_scores:
+        avg_compliance = sum(compliance_scores) / len(compliance_scores)
+        self.report_data["compliance_summary"] = {
+          "enabled": True,
+          "average_score": round(avg_compliance, 1),
+          "total_checks": len(compliance_scores),
+          "all_compliant": all(score >= 70 for score in compliance_scores)
+        }
+
     self.report_data["summary"] = {
       "campaign_id": brief.campaign_id,
       "total_products": total_products,
@@ -195,7 +277,8 @@ class CampaignPipeline:
       "assets_generated": self.report_data["assets_generated"],
       "assets_reused": self.report_data["assets_reused"],
       "success_rate": f"{(successful_products / max(1, total_products) * 100):.1f}%",
-      "duration_seconds": self.report_data["duration_seconds"]
+      "duration_seconds": self.report_data["duration_seconds"],
+      "total_warnings": len(self.report_data["warnings"])
     }
 
     # Save report

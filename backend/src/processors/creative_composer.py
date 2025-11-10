@@ -427,43 +427,39 @@ class CreativeComposer:
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
 
-    # Create semi-transparent overlay
-    overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    overlay_draw = ImageDraw.Draw(overlay)
+    # Calculate position based on smart positioning or specified position
+    padding = 40  # Comfortable padding from edges
 
-    # Calculate position
-    padding = 30
-    text_x = (img.width - text_width) // 2
-
-    if position == "bottom":
+    # Map positions to coordinates
+    if position in ["bottom", "bottom-center"]:
+      text_x = (img.width - text_width) // 2
       text_y = img.height - text_height - padding * 2
-    elif position == "top":
+    elif position == "bottom-left":
+      text_x = padding
+      text_y = img.height - text_height - padding * 2
+    elif position == "bottom-right":
+      text_x = img.width - text_width - padding
+      text_y = img.height - text_height - padding * 2
+    elif position in ["top", "top-center"]:
+      text_x = (img.width - text_width) // 2
       text_y = padding
-    else:  # center
+    elif position == "top-left":
+      text_x = padding
+      text_y = padding
+    elif position == "top-right":
+      text_x = img.width - text_width - padding
+      text_y = padding
+    elif position == "center":
+      text_x = (img.width - text_width) // 2
       text_y = (img.height - text_height) // 2
+    else:  # default to bottom-center
+      text_x = (img.width - text_width) // 2
+      text_y = img.height - text_height - padding * 2
 
-    # Draw text directly on image with subtle outline for readability
-    # First draw outline/stroke in the contrasting background color
-    outline_color = colors["bg_color"]
-    stroke_width = max(1, font_size // 20)  # Subtle outline
-
-    # Draw outline by drawing text multiple times with slight offsets
-    for adj_x in range(-stroke_width, stroke_width + 1):
-      for adj_y in range(-stroke_width, stroke_width + 1):
-        if adj_x != 0 or adj_y != 0:
-          overlay_draw.text(
-            (text_x + adj_x, text_y + adj_y),
-            wrapped_text,
-            fill=(*outline_color, 255),
-            font=font
-          )
-
-    # Draw main text with brand-aware color on top
+    # Draw clean text directly on image - no effects, just great typography
+    draw = ImageDraw.Draw(img)
     text_color_with_alpha = (*colors["text_color"], 255)
-    overlay_draw.text((text_x, text_y), wrapped_text, fill=text_color_with_alpha, font=font)
-
-    # Composite overlay onto image
-    img = Image.alpha_composite(img, overlay)
+    draw.text((text_x, text_y), wrapped_text, fill=text_color_with_alpha, font=font)
 
     # Log contrast ratio for debugging (optional)
     if brand_colors:

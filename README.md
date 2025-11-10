@@ -129,17 +129,20 @@ This platform automates the creation of social media advertising creatives by:
                 ↓
 2. API validates and queues campaign for processing
                 ↓
-3. Orchestrator executes pipeline:
+3. Orchestrator executes pipeline with real-time progress updates:
    a. Content moderation check
    b. AI copywriting optimization
    c. Localization for target regions
    d. Product image generation/retrieval
    e. Creative composition (aspect ratios + text overlays)
-   f. Brand compliance validation
+   f. Brand compliance validation (split validation)
                 ↓
-4. Assets saved to organized directory structure
+4. Progress updates sent to frontend via polling
+   (stage indicators, product counters, variation counts)
                 ↓
-5. Frontend displays results in gallery
+5. Assets saved to organized directory structure
+                ↓
+6. Frontend displays results in gallery
 ```
 
 ---
@@ -196,12 +199,13 @@ at1_demo/
 ### 1. Pipeline Orchestrator
 **File**: `backend/src/pipeline/orchestrator.py`
 
-The central coordinator that executes the campaign processing pipeline in sequential stages.
+The central coordinator that executes the campaign processing pipeline in sequential stages with real-time progress tracking.
 
 **Key Methods**:
 - `process_campaign(brief)` - Main entry point
 - `_process_product(product, brief, output_dir)` - Per-product processing
 - `_get_or_generate_asset(product, brief)` - Asset acquisition strategy
+- `_update_progress(stage, message, details)` - Send progress updates via callback
 - `_generate_report(output_dir, brief)` - JSON report generation
 
 **Pipeline Stages**:
@@ -211,6 +215,15 @@ The central coordinator that executes the campaign processing pipeline in sequen
 4. Product processing (images + variations)
 5. Brand compliance validation
 6. Report generation
+
+**Progress Tracking**:
+The orchestrator accepts an optional `progress_callback` function that receives real-time updates at each pipeline stage. Updates include:
+- Current stage name (initialization, copywriting, moderation, etc.)
+- Descriptive message
+- Stage-specific details (product count, variation count, etc.)
+- Timestamp
+
+This enables the frontend to display live progress instead of a generic loading state.
 
 ---
 
@@ -332,17 +345,26 @@ Validates campaign messages against advertising standards and regulations.
 #### Brand Compliance Validator
 **File**: `backend/src/validators/brand_compliance.py`
 
-Ensures generated creatives meet brand guidelines.
+Ensures generated creatives meet brand guidelines using a split validation approach.
 
 **Validation Checks**:
 1. **Color Compliance**: Validates brand color usage (requires ≥20% coverage)
    - Uses color quantization to group similar colors
    - Configurable tolerance (default: 75% similarity)
    - Matches image colors to brand palette
+   - **Checked on pre-overlay image** (before gradient scrim) for accurate color detection
 
 2. **Text Readability**: Checks text overlay contrast
    - Analyzes brightness in text regions
    - Recommends white or dark text
+   - **Checked on final image** (with gradient scrim) for accurate contrast assessment
+
+**Split Validation Approach**:
+To ensure accurate compliance scores, the validator uses different images for different checks:
+- **Brand colors**: Validated against pre-overlay images (before text and gradient are applied)
+- **Text readability**: Validated against final images (with gradient scrim for proper contrast)
+
+This approach prevents gradient overlays from interfering with brand color detection while still accurately measuring text contrast.
 
 **Scoring**:
 - 0-100 scale
@@ -354,7 +376,8 @@ Ensures generated creatives meet brand guidelines.
 - `extract_dominant_colors(image, count)` - Extract color palette with quantization
 - `validate_colors(image_path)` - Check brand color alignment
 - `validate_text_readability(image_path)` - Check text contrast
-- `validate_creative(image_path)` - Full compliance report
+- `validate_creative(image_path)` - Full compliance report (single image)
+- `validate_creative_split(pre_overlay_path, final_path)` - Split validation for accurate scoring
 
 **Color Quantization**:
 Groups similar pixel colors together using PIL's quantization algorithm (32-color palette) to produce meaningful percentages instead of thousands of tiny fragments.
@@ -434,14 +457,22 @@ Create and process a new campaign.
 ---
 
 #### `GET /api/campaigns/{campaign_id}/status`
-Get campaign processing status.
+Get campaign processing status with real-time progress updates.
 
 **Response**:
 ```json
 {
   "campaign_id": "summer_2024",
-  "status": "completed",
+  "status": "processing",
   "created_at": "2025-11-10T10:00:00",
+  "latest_progress": {
+    "stage": "variations",
+    "message": "Creating 1 language variations with 3 aspect ratios each",
+    "timestamp": "2025-11-10T10:01:30",
+    "current_product": 2,
+    "total_products": 3,
+    "variations_created": 3
+  },
   "report": {
     "summary": {
       "total_products": 2,
@@ -461,6 +492,54 @@ Get campaign processing status.
   }
 }
 ```
+
+**Progress Stages**:
+- `initialization` - Campaign processing started
+- `copywriting` - AI message optimization
+- `moderation` - Content compliance checking
+- `products` - Product processing with counter
+- `asset_generation` - DALL-E image generation
+- `variations` - Creating aspect ratio variations
+- `compliance` - Brand compliance validation
+
+---
+
+#### `GET /api/campaigns/{campaign_id}/progress`
+Get all progress updates for a campaign in chronological order.
+
+**Response**:
+```json
+{
+  "campaign_id": "summer_2024",
+  "status": "processing",
+  "total_updates": 17,
+  "progress_updates": [
+    {
+      "stage": "initialization",
+      "message": "Campaign processing started",
+      "timestamp": "2025-11-10T10:00:00",
+      "total_products": 3,
+      "target_region": "Europe",
+      "target_audience": "Young professionals"
+    },
+    {
+      "stage": "copywriting",
+      "message": "Optimizing campaign message with AI...",
+      "timestamp": "2025-11-10T10:00:15"
+    },
+    {
+      "stage": "products",
+      "message": "Processing product 1 of 3: Yoga Mat",
+      "timestamp": "2025-11-10T10:00:45",
+      "current_product": 1,
+      "total_products": 3,
+      "product_name": "Yoga Mat"
+    }
+  ]
+}
+```
+
+**Use Case**: Retrieve complete progress history for debugging or detailed status display.
 
 ---
 
@@ -620,17 +699,27 @@ Displays generated campaign assets organized by product and language.
 ### ProgressDashboard
 **File**: `frontend/src/components/ProgressDashboard.jsx`
 
-Real-time campaign processing status.
+Real-time campaign processing status with detailed stage tracking.
 
 **Features**:
-- Status badge (Processing/Completed/Failed)
-- Progress metrics:
+- **Live Progress Updates**: Shows current pipeline stage with visual indicators
+- **Stage Tracking**:
+  - Initializing Campaign
+  - Optimizing Message (AI copywriting)
+  - Content Moderation
+  - Processing Products (with product counter)
+  - Generating Assets (DALL-E)
+  - Creating Variations (with count)
+  - Brand Compliance Check
+- **Progress Metrics**:
   - Products processed
   - Variations created
   - Assets generated vs reused
-- Error display
-- Processing duration
-- Auto-refresh every 3 seconds during processing
+- **Completion Summary**:
+  - Processing duration
+  - Copywriting optimization results
+  - Error/warning display
+- Auto-refresh every 2 seconds during processing
 
 ---
 
@@ -886,15 +975,20 @@ backend/output/
     ├── {product_1}/
     │   ├── source.jpg              # Original DALL-E (no text)
     │   ├── en/
-    │   │   ├── 1x1.jpg             # Square + text
-    │   │   ├── 9x16.jpg            # Story + text
-    │   │   └── 16x9.jpg            # Video + text
-    │   ├── de-DE/                  # German
-    │   ├── fr-FR/                  # French
+    │   │   ├── .1x1_pre_overlay.jpg    # Hidden: pre-overlay for compliance
+    │   │   ├── 1x1.jpg                 # Square + text + gradient
+    │   │   ├── .9x16_pre_overlay.jpg   # Hidden: pre-overlay for compliance
+    │   │   ├── 9x16.jpg                # Story + text + gradient
+    │   │   ├── .16x9_pre_overlay.jpg   # Hidden: pre-overlay for compliance
+    │   │   └── 16x9.jpg                # Video + text + gradient
+    │   ├── de-DE/                      # German variations
+    │   ├── fr-FR/                      # French variations
     │   └── ...
     └── {product_2}/
         └── ...
 ```
+
+**Note**: Hidden `.{aspect}_pre_overlay.jpg` files are used internally for brand color compliance checking and are automatically excluded from public asset listings.
 
 ### Campaign Report
 
@@ -984,10 +1078,11 @@ docker compose restart backend
 - Fonts are installed in Docker image at `/usr/share/fonts/opentype/noto/`
 - Rebuild backend if missing: `docker compose build backend`
 
-**Brand compliance showing 0%**:
+**Brand compliance showing low scores**:
 - Ensure using distinctive colors (not white/gray)
 - Check DALL-E is using brand colors in prompts
 - Verify tolerance setting (default: 25 = 75% similarity)
+- Note: Brand colors are validated on pre-overlay images (before gradient scrim) to ensure accurate detection
 
 **API quota exceeded**:
 - Upload product images instead of generating

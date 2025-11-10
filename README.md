@@ -158,8 +158,18 @@ at1_demo/
 │   │   │   ├── image_generator.py      # DALL-E integration
 │   │   │   ├── creative_copywriter.py  # GPT-4 copywriting
 │   │   │   └── asset_manager.py        # Asset storage
-│   │   ├── processors/        # Image processing
-│   │   │   └── creative_composer.py    # Aspect ratios, text overlays
+│   │   ├── utils/             # Shared utilities (NEW)
+│   │   │   ├── color_utils.py          # Color operations & WCAG
+│   │   │   ├── image_utils.py          # PIL helpers
+│   │   │   ├── ai_utils.py             # OpenAI response parsing
+│   │   │   ├── string_utils.py         # Text processing
+│   │   │   └── path_utils.py           # File operations
+│   │   ├── processors/        # Image processing (REFACTORED)
+│   │   │   ├── creative_composer.py    # Main orchestrator (380 lines)
+│   │   │   ├── font_manager.py         # Font discovery & loading
+│   │   │   ├── text_layout_engine.py   # Text positioning & wrapping
+│   │   │   ├── color_analyzer.py       # Brand-compliant colors
+│   │   │   └── gradient_renderer.py    # Gradient overlays
 │   │   ├── validators/        # Quality & compliance
 │   │   │   ├── content_moderator.py    # Content safety
 │   │   │   └── brand_compliance.py     # Brand guideline validation
@@ -291,33 +301,156 @@ Manages storage and retrieval of both user-uploaded and AI-generated images.
 
 ### 3. Processors
 
-#### Creative Composer
+The processors package has been refactored following the **Orchestrator Pattern** with specialized components for maintainability and testability. All processor classes follow the **Single Responsibility Principle**.
+
+#### Creative Composer (Orchestrator)
 **File**: `backend/src/processors/creative_composer.py`
 
-Transforms source images into design-ready advertising creatives with brand-aware text overlays, smart positioning, and smooth gradient scrims.
+The main orchestrator that coordinates specialized components to transform source images into professional advertising creatives.
 
-**Key Features**:
-- **Smart Positioning Algorithm**: Analyzes 6 candidate regions to find optimal text placement based on uniformity and contrast
-- **Brand-Aware Text Colors**: Uses campaign brand colors with WCAG AAA (7:1) contrast compliance
-- **Edge-Based Gradient Scrims**: Smooth directional vignettes (Netflix/Apple TV+ style) using contrasting brand colors that enhance text readability
-- **WCAG Compliance**: Calculates relative luminance and contrast ratios per accessibility guidelines
-- **International Font Support**: Arabic, Hebrew, CJK languages with appropriate font selection
-- **Smart Center Cropping**: Maintains focal points across aspect ratios
-- **High-Quality Resampling**: LANCZOS algorithm for professional image quality
+**Architecture**:
+```python
+class CreativeComposer:
+    def __init__(self):
+        self.font_manager = FontManager()           # Font discovery
+        self.layout_engine = TextLayoutEngine()     # Text positioning
+        self.color_analyzer = ColorAnalyzer()       # Color selection
+        self.gradient_renderer = GradientRenderer() # Gradient overlays
+```
+
+**Key Methods**:
+- `smart_crop(image, target_ratio)` - Intelligent center cropping
+- `resize_to_dimensions(image, dimensions)` - High-quality resampling (LANCZOS)
+- `add_text_overlay(...)` - Orchestrates all components to create branded overlays
+- `create_variations(...)` - Generate all aspect ratios (1:1, 9:16, 16:9)
+- `create_localized_variations(...)` - Multi-language variations
 
 **Supported Aspect Ratios**:
 - **1:1 (Square)**: 1080x1080 - Instagram feed, Facebook
 - **9:16 (Vertical)**: 1080x1920 - Instagram Stories, TikTok
 - **16:9 (Horizontal)**: 1920x1080 - YouTube, Facebook video
 
+---
+
+#### FontManager
+**File**: `backend/src/processors/font_manager.py`
+
+Handles font discovery and loading for international text support.
+
+**Features**:
+- Platform-specific font discovery (macOS, Windows, Linux/Docker)
+- Language-specific fonts (Arabic, Hebrew, CJK scripts)
+- Automatic fallback chain
+- Noto font family support
+
 **Key Methods**:
-- `smart_crop(image, target_ratio)` - Intelligent center cropping
-- `_find_best_text_region(image)` - Analyzes 6 regions to find optimal text placement
-- `calculate_contrast_ratio(color1, color2)` - WCAG contrast calculation
-- `select_text_colors(region_analysis, brand_colors)` - Brand-aware color selection with 7:1 threshold
-- `add_text_overlay(image, message, position, language_code, brand_colors)` - Brand-aware text with gradient scrim
-- `create_variations(source_image, message, output_dir, product_name, brand_colors)` - Generate all aspect ratios
-- `create_localized_variations(source_image, messages, output_dir, product_name, brand_colors)` - Multi-language variations
+- `find_font(language_code)` - Find appropriate font for language
+- `load_font_with_fallback(font_size, language_code)` - Load with graceful degradation
+
+---
+
+#### TextLayoutEngine
+**File**: `backend/src/processors/text_layout_engine.py`
+
+Handles text positioning, wrapping, and region analysis.
+
+**Features**:
+- **Smart Positioning**: Analyzes 6 candidate regions (top-left, top-right, bottom-left, bottom-right, bottom-center, center)
+- **Scoring Algorithm**: 70% contrast potential + 30% uniformity
+- **Pixel-Based Wrapping**: Works correctly for all languages (Latin, CJK, Arabic, Hebrew)
+- **Region Analysis**: Extracts dominant colors and luminance
+
+**Key Methods**:
+- `find_best_text_region(image)` - Analyzes regions and returns best position
+- `analyze_text_region(image, position)` - Returns color analysis for region
+- `wrap_text(text, font, max_width, draw_context)` - Wraps text to fit width
+
+---
+
+#### ColorAnalyzer
+**File**: `backend/src/processors/color_analyzer.py`
+
+Selects brand-compliant, accessible color combinations.
+
+**Features**:
+- **WCAG AAA Compliance**: 7:1 contrast ratio by default (stricter than AA's 4.5:1)
+- **Brand Color Prioritization**: Uses campaign brand colors when possible
+- **Automatic Fallback**: Uses black/white if brand colors don't meet contrast requirements
+- **Light/Dark Separation**: Categorizes colors by relative luminance
+
+**Key Methods**:
+- `select_text_colors(region_analysis, brand_colors)` - Returns text/background colors with contrast ratio
+- `get_recommended_text_color(background_color)` - Quick black/white recommendation
+
+---
+
+#### GradientRenderer
+**File**: `backend/src/processors/gradient_renderer.py`
+
+Creates professional gradient overlays for text readability.
+
+**Features**:
+- **Directional Gradients**: Adapts to text position (top/bottom/left/right)
+- **Exponential Ease-Out**: Smooth, natural-looking fades (Netflix/streaming service style)
+- **Position-Aware**: Gradient emanates from the edge closest to text
+- **Configurable Opacity**: Default 59% (alpha=150) for balanced readability
+
+**Key Methods**:
+- `create_directional_gradient(image_size, text_position, text_size, scrim_color)` - Creates position-aware gradient
+- `create_vignette(image_size, color, strength)` - Creates circular vignette overlay
+
+---
+
+### 3.1 Shared Utilities
+
+**Package**: `backend/src/utils/`
+
+Reusable utility modules that eliminate code duplication across services, processors, and validators.
+
+#### color_utils.py
+Color space conversions and WCAG compliance calculations.
+
+**Functions**:
+- `hex_to_rgb(hex_color)` - Convert hex to RGB tuple
+- `rgb_to_hex(rgb)` - Convert RGB to hex string
+- `rgb_to_hsl(r, g, b)` - Convert RGB to HSL (hue, saturation, lightness)
+- `hex_to_color_name(hex_color)` - Get descriptive color names (e.g., "vibrant red")
+- `relative_luminance(rgb)` - Calculate WCAG relative luminance (0.0-1.0)
+- `calculate_contrast_ratio(color1, color2)` - Calculate WCAG contrast ratio
+- `color_distance(c1, c2)` - Euclidean distance in RGB space
+
+#### image_utils.py
+Common PIL/Pillow image operations.
+
+**Functions**:
+- `ensure_rgb(image)` - Convert image to RGB mode if needed
+- `validate_image_dimensions(image, min_width, min_height)` - Check size requirements
+- `get_aspect_ratio(image)` - Calculate aspect ratio as decimal
+
+#### ai_utils.py
+OpenAI API response parsing utilities.
+
+**Functions**:
+- `extract_json_from_markdown(content)` - Extract JSON from markdown code blocks
+- `parse_json_response(content)` - Parse OpenAI JSON responses (handles markdown wrappers)
+- `count_tokens_estimate(text)` - Estimate token count for OpenAI API
+- `truncate_to_tokens(text, max_tokens)` - Truncate text to token limit
+
+#### string_utils.py
+String sanitization and text processing.
+
+**Functions**:
+- `to_safe_filename(name)` - Convert string to safe filename (removes spaces, special chars)
+- `sanitize_filename(filename)` - Full filename sanitization
+- `truncate_text(text, max_length)` - Truncate with ellipsis
+
+#### path_utils.py
+File system path operations.
+
+**Functions**:
+- `ensure_dir(path)` - Create directory if it doesn't exist (with parents)
+- `resolve_campaign_path(campaign_id, product_name)` - Get campaign output directory
+- `get_campaign_output_dir(campaign_id)` - Get campaign root directory
 
 ---
 

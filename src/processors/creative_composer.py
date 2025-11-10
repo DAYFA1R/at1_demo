@@ -246,3 +246,54 @@ class CreativeComposer:
         img = img.convert('RGB')
 
       return self.create_variations(img, message, output_dir, product_name)
+
+  def create_localized_variations(self, source_image: Image.Image,
+                                 messages: Dict[str, str],
+                                 output_dir: Path,
+                                 product_name: str) -> Dict[str, Dict[str, Path]]:
+    """
+    Create variations for multiple languages/localizations.
+
+    Args:
+      source_image: Source image to process
+      messages: Dictionary of language code to message
+      output_dir: Base directory to save variations
+      product_name: Name of product
+
+    Returns:
+      Nested dictionary: {language: {aspect_ratio: path}}
+    """
+    results = {}
+
+    for lang_code, message in messages.items():
+      # Create language-specific subdirectory
+      lang_dir = output_dir / lang_code
+      lang_dir.mkdir(parents=True, exist_ok=True)
+
+      print(f"  Creating {lang_code} variations...")
+
+      # Create variations for this language
+      lang_results = {}
+
+      for aspect_ratio in AspectRatio.all():
+        # Smart crop to aspect ratio
+        cropped = self.smart_crop(source_image, aspect_ratio.ratio)
+
+        # Resize to target dimensions
+        resized = self.resize_to_dimensions(cropped, aspect_ratio.dimensions)
+
+        # Add localized text overlay
+        final = self.add_text_overlay(resized, message, position="bottom")
+
+        # Save with quality optimization
+        filename = f"{aspect_ratio.display_name}.jpg"
+        output_path = lang_dir / filename
+
+        final.save(output_path, quality=95, optimize=True)
+        lang_results[aspect_ratio.display_name] = output_path
+
+        print(f"    ✓ {aspect_ratio.display_name}: {output_path}")
+
+      results[lang_code] = lang_results
+
+    return results

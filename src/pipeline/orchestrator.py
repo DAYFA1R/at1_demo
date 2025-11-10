@@ -15,20 +15,23 @@ from ..services.image_generator import ImageGenerator
 from ..processors.creative_composer import CreativeComposer
 from ..validators.content_moderator import ContentModerator
 from ..validators.brand_compliance import BrandComplianceValidator
+from ..services.creative_copywriter import CreativeCopywriter
 
 
 class CampaignPipeline:
   """Orchestrates the entire campaign creative generation process."""
 
-  def __init__(self, output_dir: str = "./output"):
+  def __init__(self, output_dir: str = "./output", enable_copywriting: bool = True):
     """
     Initialize the campaign pipeline.
 
     Args:
       output_dir: Base directory for output files
+      enable_copywriting: Enable AI copywriting optimization
     """
     self.output_dir = Path(output_dir)
     self.output_dir.mkdir(parents=True, exist_ok=True)
+    self.enable_copywriting = enable_copywriting
 
     # Initialize services
     self.asset_manager = AssetManager()
@@ -36,6 +39,7 @@ class CampaignPipeline:
     self.composer = CreativeComposer()
     self.content_moderator = ContentModerator()
     self.brand_validator = None  # Initialized per campaign with brand colors
+    self.copywriter = CreativeCopywriter() if enable_copywriting else None
 
     # Report data for tracking
     self.report_data = {
@@ -69,7 +73,43 @@ class CampaignPipeline:
     print(f"Campaign Message: {brief.campaign_message}")
     print(f"Products: {brief.get_product_count()}\n")
 
-    # Step 1: Content moderation check
+    # Step 1: AI Copywriting optimization (if enabled)
+    if self.copywriter and self.enable_copywriting:
+      print("✍️  Generating optimized campaign messages...")
+      try:
+        copy_results = self.copywriter.generate_campaign_copy(brief)
+        self.report_data["copywriting"] = copy_results
+
+        # Show original vs optimized
+        print(f"   📝 Original: {brief.campaign_message}")
+        print(f"   🎯 Optimized: {copy_results['selected_message']}")
+
+        # Show confidence
+        confidence = copy_results.get('confidence_score', 0.5)
+        print(f"   📊 Confidence: {confidence:.1%}")
+
+        # Show variants if available
+        if copy_results.get('optimization', {}).get('variants'):
+          print(f"\n   Alternative variants:")
+          for i, variant in enumerate(copy_results['optimization']['variants'][:2], 1):
+            print(f"   {i}. {variant['text']}")
+            print(f"      → {variant.get('reasoning', 'N/A')}")
+
+        # Update brief with optimized message
+        original_message = brief.campaign_message
+        brief.campaign_message = copy_results['selected_message']
+        self.report_data["copywriting"]["original_message"] = original_message
+
+        print(f"\n   ✓ Using optimized message for campaign")
+        print()
+
+      except Exception as e:
+        print(f"   ⚠️  Copywriting optimization failed: {e}")
+        print(f"   → Using original message")
+        self.report_data["warnings"].append(f"Copywriting failed: {str(e)}")
+        print()
+
+    # Step 2: Content moderation check
     print("🔍 Running content moderation...")
     moderation_result = self.content_moderator.check_campaign_message(
       brief.campaign_message,
@@ -99,7 +139,7 @@ class CampaignPipeline:
 
     print(f"✓ Content approved (Risk: {moderation_result['risk_level']})\n")
 
-    # Step 2: Initialize brand validator
+    # Step 3: Initialize brand validator
     if brief.brand_colors:
       self.brand_validator = BrandComplianceValidator(
         brand_colors=brief.brand_colors,
@@ -150,16 +190,42 @@ class CampaignPipeline:
 
     product_output = output_dir / product.get_safe_name()
 
+    # Prepare messages for localization
+    messages = {"en": brief.campaign_message}  # Default English
+
+    # Add localizations if available from copywriting
+    if self.copywriter and "copywriting" in self.report_data:
+      localizations = self.report_data["copywriting"].get("localizations", {})
+      if localizations and "suggestions" in localizations:
+        # Add localized messages
+        messages.update(localizations["suggestions"])
+        print(f"  🌍 Creating variations for {len(messages)} languages...")
+
     with Image.open(asset_path) as img:
       if img.mode != 'RGB':
         img = img.convert('RGB')
 
-      variations = self.composer.create_variations(
-        img,
-        brief.campaign_message,
-        product_output,
-        product.name
-      )
+      # Check if we have localizations
+      if len(messages) > 1:
+        # Create localized variations
+        all_variations = self.composer.create_localized_variations(
+          img,
+          messages,
+          product_output,
+          product.name
+        )
+        # Flatten for backward compatibility (use English for compliance check)
+        variations = all_variations.get("en", {})
+      else:
+        # Single language - use original method but put in 'en' folder
+        en_output = product_output / "en"
+        variations = self.composer.create_variations(
+          img,
+          brief.campaign_message,
+          en_output,
+          product.name
+        )
+        all_variations = {"en": variations}
 
     # Step 3: Brand compliance check
     compliance_results = {}
@@ -177,12 +243,16 @@ class CampaignPipeline:
           print(f"  ✓ {name}: {compliance['summary']} (Score: {compliance['overall_score']})")
 
     # Track results
-    self.report_data["variations_created"] += len(variations)
+    total_variations = sum(len(v) for v in all_variations.values())
+    self.report_data["variations_created"] += total_variations
+
     product_data = {
       "name": product.name,
       "source": "existing" if product.has_existing_assets() else "generated",
       "variations": list(variations.keys()),
-      "output_path": str(product_output)
+      "output_path": str(product_output),
+      "languages": list(all_variations.keys()),
+      "total_files": total_variations
     }
 
     if compliance_results:

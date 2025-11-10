@@ -1,0 +1,16 @@
+campaign_id: summer_2024
+products:
+  - name: Premium Protein Powder
+    description: Plant-based protein powder with vanilla and berry flavors
+    existing_assets: []
+  - name: Energy Bar Collection
+    description: Organic energy bars with nuts, seeds, and dark chocolate
+    existing_assets: []
+
+target_region: Europe
+target_audience: Active lifestyle enthusiasts aged 20-35
+campaign_message: Fuel your journey with natural energy
+brand_colors:
+  - "#FF6B35"
+  - "#004E89"
+logo_path: null

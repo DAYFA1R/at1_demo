@@ -1,0 +1,20 @@
+{
+  "campaign_id": "winter_collection_2024",
+  "products": [
+    {
+      "name": "Premium Coffee Blend",
+      "description": "Artisan roasted coffee beans with notes of chocolate and caramel",
+      "existing_assets": ["products/premium_coffee_blend.jpg"]
+    },
+    {
+      "name": "Hot Chocolate Mix",
+      "description": "Rich Belgian chocolate powder with marshmallows",
+      "existing_assets": []
+    }
+  ],
+  "target_region": "North America",
+  "target_audience": "Coffee lovers and comfort seekers aged 30-50",
+  "campaign_message": "Warm moments, perfect flavors",
+  "brand_colors": ["#8B4513", "#F5DEB3"],
+  "logo_path": null
+}

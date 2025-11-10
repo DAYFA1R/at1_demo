@@ -9,11 +9,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from dotenv import load_dotenv
+import shutil
 
 from src.models.campaign import CampaignBrief, Product
 from src.pipeline.orchestrator import CampaignPipeline
@@ -41,18 +42,26 @@ app.add_middleware(
 OUTPUT_DIR = Path("./output")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+# Uploads directory for user-provided images
+UPLOADS_DIR = Path("./uploads")
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
 # In-memory storage for campaign status (POC only)
 campaign_store: Dict[str, Dict[str, Any]] = {}
 
 
 # Pydantic models for API
 class ProductInput(BaseModel):
+  model_config = ConfigDict(extra='ignore')
+
   name: str = Field(..., description="Product name")
   description: str = Field(..., description="Product description")
   existing_assets: list[str] = Field(default_factory=list, description="Paths to existing assets")
 
 
 class CampaignInput(BaseModel):
+  model_config = ConfigDict(extra='ignore')
+
   products: list[ProductInput] = Field(..., min_length=2, description="List of products (minimum 2)")
   target_region: str = Field(..., description="Target geographic region")
   target_audience: str = Field(..., description="Target audience description")
@@ -225,6 +234,12 @@ async def get_campaign_assets(campaign_id: str):
 
   # Build asset list from output directory
   output_path = Path(campaign_data["output_path"])
+
+  # Handle nested campaign directory structure
+  nested_campaign_dir = output_path / campaign_id
+  if nested_campaign_dir.exists() and nested_campaign_dir.is_dir():
+    output_path = nested_campaign_dir
+
   assets = []
 
   # Scan directory for generated images
@@ -262,10 +277,20 @@ async def get_campaign_assets(campaign_id: str):
 @app.get("/api/campaigns/{campaign_id}/assets/{product}/{language}/{filename}")
 async def get_asset_file(campaign_id: str, product: str, language: str, filename: str):
   """Serve a specific asset file."""
-  if campaign_id not in campaign_store:
-    raise HTTPException(status_code=404, detail="Campaign not found")
+  # Try to get from campaign store first
+  if campaign_id in campaign_store:
+    output_path = Path(campaign_store[campaign_id]["output_path"])
+  else:
+    # Fall back to filesystem scan for campaigns created before API started
+    output_path = OUTPUT_DIR / campaign_id
+    if not output_path.exists():
+      raise HTTPException(status_code=404, detail="Campaign not found")
 
-  output_path = Path(campaign_store[campaign_id]["output_path"])
+  # Handle nested campaign directory structure
+  nested_campaign_dir = output_path / campaign_id
+  if nested_campaign_dir.exists() and nested_campaign_dir.is_dir():
+    output_path = nested_campaign_dir
+
   file_path = output_path / product / language / filename
 
   if not file_path.exists():
@@ -277,10 +302,20 @@ async def get_asset_file(campaign_id: str, product: str, language: str, filename
 @app.get("/api/campaigns/{campaign_id}/assets/{product}/{filename}")
 async def get_asset_file_no_lang(campaign_id: str, product: str, filename: str):
   """Serve a specific asset file (no language subdirectory)."""
-  if campaign_id not in campaign_store:
-    raise HTTPException(status_code=404, detail="Campaign not found")
+  # Try to get from campaign store first
+  if campaign_id in campaign_store:
+    output_path = Path(campaign_store[campaign_id]["output_path"])
+  else:
+    # Fall back to filesystem scan for campaigns created before API started
+    output_path = OUTPUT_DIR / campaign_id
+    if not output_path.exists():
+      raise HTTPException(status_code=404, detail="Campaign not found")
 
-  output_path = Path(campaign_store[campaign_id]["output_path"])
+  # Handle nested campaign directory structure
+  nested_campaign_dir = output_path / campaign_id
+  if nested_campaign_dir.exists() and nested_campaign_dir.is_dir():
+    output_path = nested_campaign_dir
+
   file_path = output_path / product / filename
 
   if not file_path.exists():
@@ -302,6 +337,98 @@ async def list_campaigns():
       }
       for cid, data in campaign_store.items()
     ]
+  }
+
+
+@app.post("/api/upload")
+async def upload_image(file: UploadFile = File(...)):
+  """
+  Upload a product image to use in campaigns.
+
+  Returns the path to the uploaded file that can be used in existing_assets.
+  """
+  # Validate file type
+  if not file.content_type or not file.content_type.startswith("image/"):
+    raise HTTPException(status_code=400, detail="File must be an image")
+
+  # Generate unique filename
+  file_extension = Path(file.filename).suffix
+  unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+  file_path = UPLOADS_DIR / unique_filename
+
+  # Save uploaded file
+  try:
+    with file_path.open("wb") as buffer:
+      shutil.copyfileobj(file.file, buffer)
+  except Exception as e:
+    raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+
+  return {
+    "filename": unique_filename,
+    "original_filename": file.filename,
+    "path": f"/api/uploads/{unique_filename}",
+    "absolute_path": str(file_path.absolute())
+  }
+
+
+@app.get("/api/uploads/{filename}")
+async def get_uploaded_file(filename: str):
+  """Serve an uploaded file."""
+  file_path = UPLOADS_DIR / filename
+
+  if not file_path.exists():
+    raise HTTPException(status_code=404, detail="File not found")
+
+  return FileResponse(file_path, media_type="image/jpeg")
+
+
+@app.get("/api/generated-images")
+async def list_generated_images():
+  """
+  List all previously generated images from past campaigns.
+
+  Returns a list of images that can be reused as existing_assets.
+  """
+  generated_images = []
+
+  # Scan all campaign output directories
+  for campaign_dir in OUTPUT_DIR.iterdir():
+    if not campaign_dir.is_dir():
+      continue
+
+    campaign_id = campaign_dir.name
+
+    # Handle nested campaign directory structure
+    scan_dir = campaign_dir
+    nested_campaign_dir = campaign_dir / campaign_id
+    if nested_campaign_dir.exists() and nested_campaign_dir.is_dir():
+      scan_dir = nested_campaign_dir
+
+    # Scan for product images
+    for product_dir in scan_dir.iterdir():
+      if not product_dir.is_dir() or product_dir.name == "__pycache__":
+        continue
+
+      product_name = product_dir.name
+
+      # Look for source images (DALL-E generated, before variations)
+      source_image = product_dir / "source.jpg"
+      if source_image.exists():
+        generated_images.append({
+          "campaign_id": campaign_id,
+          "product": product_name,
+          "filename": "source.jpg",
+          "url": f"/api/campaigns/{campaign_id}/assets/{product_name}/source.jpg",
+          "absolute_path": str(source_image.absolute()),
+          "created_at": datetime.fromtimestamp(source_image.stat().st_mtime).isoformat()
+        })
+
+  # Sort by creation time (newest first)
+  generated_images.sort(key=lambda x: x["created_at"], reverse=True)
+
+  return {
+    "total": len(generated_images),
+    "images": generated_images
   }
 
 

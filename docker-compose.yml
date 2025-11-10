@@ -8,6 +8,7 @@ services:
     volumes:
       - ./backend:/app
       - ./backend/output:/app/output
+      - ./backend/uploads:/app/uploads
       - /app/venv  # Don't mount venv from host
     env_file:
       - ./backend/.env

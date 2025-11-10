@@ -118,6 +118,8 @@ export default function AssetGallery({ campaignId, reportData }) {
       {reportData && (
         <div className="report-section">
           <h3>Campaign Report</h3>
+
+          {/* Summary Stats */}
           <div className="report-grid">
             <div className="report-item">
               <strong>Duration:</strong> {reportData.summary.duration_seconds}s
@@ -125,20 +127,126 @@ export default function AssetGallery({ campaignId, reportData }) {
             <div className="report-item">
               <strong>Success Rate:</strong> {reportData.summary.success_rate}
             </div>
-            {reportData.summary.total_warnings > 0 && (
-              <div className="report-item warning">
-                <strong>Warnings:</strong> {reportData.summary.total_warnings}
-              </div>
-            )}
+            <div className="report-item">
+              <strong>Assets Generated:</strong> {reportData.summary.assets_generated}
+            </div>
+            <div className="report-item">
+              <strong>Total Variations:</strong> {reportData.summary.total_variations}
+            </div>
           </div>
 
+          {/* Copywriting Insights */}
+          {reportData.copywriting && (
+            <div className="copywriting-section">
+              <h4>AI Copywriting Insights</h4>
+              <div className="message-evolution">
+                <div><strong>Original:</strong> {reportData.copywriting.original_message}</div>
+                <div><strong>Optimized:</strong> {reportData.copywriting.selected_message}</div>
+                <div><strong>Confidence:</strong> {(reportData.copywriting.confidence_score * 100).toFixed(0)}%</div>
+              </div>
+
+              {reportData.copywriting.optimization?.variants && (
+                <div className="ab-variants">
+                  <h5>Message Variants & Reasoning</h5>
+                  {reportData.copywriting.optimization.variants.map((variant, idx) => (
+                    <div key={idx} className="variant-card">
+                      <div className="variant-text">"{variant.text}"</div>
+                      <div className="variant-details">
+                        <div><strong>Why:</strong> {variant.reasoning}</div>
+                        <div><strong>Hook:</strong> {variant.emotional_hook} • <strong>Confidence:</strong> {(variant.confidence * 100).toFixed(0)}%</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {reportData.copywriting.ab_test_variants && (
+                <div className="ab-tests">
+                  <h5>A/B Test Recommendations</h5>
+                  {reportData.copywriting.ab_test_variants.map((test, idx) => (
+                    <div key={idx} className="test-card">
+                      <div className="test-text">"{test.text}"</div>
+                      <div className="test-approach"><strong>Approach:</strong> {test.approach}</div>
+                      <div className="test-hypothesis">{test.hypothesis}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {reportData.copywriting.optimization?.persona_insights && (
+                <details className="persona-details">
+                  <summary><strong>Audience Persona Insights</strong></summary>
+                  <div className="persona-content">
+                    <div><strong>Demographics:</strong> {reportData.copywriting.optimization.persona_insights.demographics}</div>
+                    <div><strong>Values:</strong> {reportData.copywriting.optimization.persona_insights.values?.join(', ')}</div>
+                    <div><strong>Pain Points:</strong> {reportData.copywriting.optimization.persona_insights.pain_points?.join(', ')}</div>
+                    <div><strong>Emotional Triggers:</strong> {reportData.copywriting.optimization.persona_insights.emotional_triggers?.join(', ')}</div>
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
+
+          {/* Warnings */}
+          {reportData.warnings && reportData.warnings.length > 0 && (
+            <div className="warnings-section">
+              <h4>Warnings ({reportData.warnings.length})</h4>
+              <ul className="warnings-list">
+                {reportData.warnings.map((warning, idx) => (
+                  <li key={idx}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Brand Compliance Details */}
           {reportData.compliance_summary?.enabled && (
             <div className="compliance-info">
               <h4>Brand Compliance</h4>
-              <p>
-                Average Score: <strong>{reportData.compliance_summary.average_score}</strong> / 100
-              </p>
-              <p>Total Checks: {reportData.compliance_summary.total_checks}</p>
+              <div className="compliance-summary">
+                <div>Average Score: <strong>{reportData.compliance_summary.average_score}</strong> / 100</div>
+                <div>Total Checks: {reportData.compliance_summary.total_checks}</div>
+                <div>Status: {reportData.compliance_summary.all_compliant ? '✓ All Compliant' : '⚠ Needs Review'}</div>
+              </div>
+
+              {reportData.products_processed && (
+                <details className="compliance-details">
+                  <summary><strong>Detailed Compliance Breakdown</strong></summary>
+                  {reportData.products_processed.map((product, pidx) => (
+                    <div key={pidx} className="product-compliance">
+                      <h5>{product.name}</h5>
+                      {product.compliance && Object.entries(product.compliance).map(([ratio, check]) => (
+                        <div key={ratio} className="compliance-check">
+                          <div className="check-header">
+                            <strong>{ratio}</strong> - Score: {check.overall_score}/100
+                            {!check.compliant && <span className="non-compliant"> ⚠</span>}
+                          </div>
+                          <div className="check-details">
+                            <div><strong>Summary:</strong> {check.summary}</div>
+                            {check.checks?.colors && (
+                              <div>
+                                • <strong>Brand Colors:</strong> {
+                                  check.checks.colors.reason
+                                    ? check.checks.colors.reason
+                                    : check.checks.colors.compliant
+                                      ? `✓ ${check.checks.colors.brand_color_coverage}% coverage`
+                                      : `✗ Only ${check.checks.colors.brand_color_coverage}% coverage (needs ≥20%)`
+                                }
+                              </div>
+                            )}
+                            {check.checks?.readability && (
+                              <div>
+                                • <strong>Text Readability:</strong> {check.checks.readability.readable ? '✓ Readable' : '✗ Needs improvement'}
+                                (Brightness: {check.checks.readability.text_area_brightness?.toFixed(1)} - Recommend: {check.checks.readability.recommendation})
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </details>
+              )}
             </div>
           )}
         </div>

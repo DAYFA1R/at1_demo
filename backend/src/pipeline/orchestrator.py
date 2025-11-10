@@ -185,10 +185,21 @@ class CampaignPipeline:
     if not asset_path:
       raise ValueError(f"Could not obtain asset for {product.name}")
 
+    # Step 1.5: Save original source image to product directory for reuse
+    product_output = output_dir / product.get_safe_name()
+    product_output.mkdir(parents=True, exist_ok=True)
+
+    source_dest = product_output / "source.jpg"
+    if not source_dest.exists():  # Don't overwrite if already exists
+      import shutil
+      with Image.open(asset_path) as img:
+        if img.mode != 'RGB':
+          img = img.convert('RGB')
+        img.save(source_dest, 'JPEG', quality=95)
+      print(f"  💾 Saved original source image: source.jpg")
+
     # Step 2: Create variations for all aspect ratios
     print(f"\n📐 Creating aspect ratio variations...")
-
-    product_output = output_dir / product.get_safe_name()
 
     # Prepare messages for localization
     messages = {"en": brief.campaign_message}  # Default English

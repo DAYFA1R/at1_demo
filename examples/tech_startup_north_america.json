@@ -1,0 +1,20 @@
+{
+  "campaign_id": "tech_launch_2024",
+  "products": [
+    {
+      "name": "SmartHub Pro",
+      "description": "AI-powered smart home hub with voice control and automation",
+      "existing_assets": []
+    },
+    {
+      "name": "CodeSync Keyboard",
+      "description": "Mechanical keyboard designed for developers with programmable macros",
+      "existing_assets": []
+    }
+  ],
+  "target_region": "North America",
+  "target_audience": "Tech-savvy professionals and early adopters aged 25-45",
+  "campaign_message": "Build your future, one innovation at a time",
+  "brand_colors": ["#0066FF", "#00FFCC", "#1a1a1a"],
+  "enable_copywriting": true
+}

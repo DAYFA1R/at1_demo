@@ -1,0 +1,13 @@
+campaign_id: radiance_collection_2024
+products:
+  - name: Argan Oil Serum
+    description: Pure Moroccan argan oil enriched with vitamin E for radiant skin
+    existing_assets: []
+  - name: Rose Water Toner
+    description: Traditional rose water toner with natural botanical extracts
+    existing_assets: []
+target_region: Middle East
+target_audience: Beauty enthusiasts seeking natural luxury skincare aged 25-45
+campaign_message: Unveil your natural glow
+brand_colors: ["#E84393", "#FD79A8", "#FDCB6E"]
+enable_copywriting: true

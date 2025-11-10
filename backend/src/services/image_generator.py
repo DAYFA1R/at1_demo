@@ -44,6 +44,58 @@ class ImageGenerator:
     self._last_request_time = 0
     self._min_request_interval = 2  # seconds between requests
 
+  def _hex_to_color_name(self, hex_color: str) -> str:
+    """
+    Convert hex color to descriptive color name for better DALL-E understanding.
+
+    Args:
+      hex_color: Hex color code (e.g., "#FF0000")
+
+    Returns:
+      Color description string
+    """
+    # Remove # if present
+    hex_color = hex_color.lstrip('#')
+
+    try:
+      # Convert to RGB
+      r = int(hex_color[0:2], 16)
+      g = int(hex_color[2:4], 16)
+      b = int(hex_color[4:6], 16)
+
+      # Basic color name mapping based on dominant channel
+      max_val = max(r, g, b)
+      min_val = min(r, g, b)
+
+      # Check for grayscale
+      if max_val - min_val < 30:
+        if max_val < 50:
+          return "black"
+        elif max_val < 130:
+          return "dark gray"
+        elif max_val < 200:
+          return "gray"
+        else:
+          return "white"
+
+      # Determine dominant color
+      if r > g and r > b:
+        if g > 100:
+          return "orange" if g > b else "red-orange"
+        return "red" if r > 200 else "dark red"
+      elif g > r and g > b:
+        if b > 100:
+          return "teal" if b > r else "cyan"
+        return "green" if g > 200 else "dark green"
+      elif b > r and b > g:
+        if r > 100:
+          return "purple" if r > g else "magenta"
+        return "blue" if b > 200 else "dark blue"
+      else:
+        return "mixed color"
+    except:
+      return hex_color
+
   def build_prompt(self, product: Product, brief: CampaignBrief) -> str:
     """
     Build an effective DALL-E prompt for product image generation.
@@ -57,37 +109,30 @@ class ImageGenerator:
     """
     prompt_parts = []
 
-    # Base description
-    prompt_parts.append(f"Professional product photography of {product.description}")
+    # Brand colors MUST BE FIRST AND DOMINANT if specified
+    if brief.brand_colors and len(brief.brand_colors) > 0:
+      # Convert hex to color names for better DALL-E understanding
+      color_names = [self._hex_to_color_name(c) for c in brief.brand_colors[:2]]
+      primary_color = color_names[0]
+      secondary_color = color_names[1] if len(color_names) > 1 else primary_color
 
-    # Style guidance
-    prompt_parts.append("modern, clean, minimalist style")
-    prompt_parts.append("bright, well-lit, high quality")
-    prompt_parts.append("suitable for social media advertising")
+      # Make colors THE PRIMARY FOCUS
+      prompt_parts.append(f"{primary_color} and {secondary_color} colored product photography")
+      prompt_parts.append(f"{product.description} on {primary_color} background")
+      prompt_parts.append(f"vibrant {primary_color} and {secondary_color} color palette")
+      prompt_parts.append(f"bold {primary_color} tones dominating the image")
+    else:
+      # No brand colors specified
+      prompt_parts.append(f"Professional product photography of {product.description}")
 
-    # Target audience context
+    # Style guidance (secondary to colors)
+    prompt_parts.append("clean, modern composition")
+    prompt_parts.append("well-lit, high quality")
+    prompt_parts.append("social media advertising style")
+
+    # Target audience context (minimal)
     if brief.target_audience:
       prompt_parts.append(f"appealing to {brief.target_audience}")
-
-    # Regional styling
-    region_styles = {
-      "North America": "contemporary Western aesthetic",
-      "Europe": "sophisticated European design sensibility",
-      "Asia": "vibrant modern Asian market style",
-      "South America": "colorful Latin American visual appeal",
-      "Middle East": "elegant Middle Eastern style",
-    }
-
-    for region, style in region_styles.items():
-      if region.lower() in brief.target_region.lower():
-        prompt_parts.append(style)
-        break
-
-    # Brand colors if specified
-    if brief.brand_colors and len(brief.brand_colors) > 0:
-      # Limit to first 2 colors to avoid confusion
-      colors = ', '.join(brief.brand_colors[:2])
-      prompt_parts.append(f"incorporating brand colors {colors}")
 
     # Combine into final prompt
     prompt = ", ".join(prompt_parts)

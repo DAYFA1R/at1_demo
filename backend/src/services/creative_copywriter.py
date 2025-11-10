@@ -25,12 +25,12 @@ class CreativeCopywriter:
       "values": "craftsmanship, sustainability, heritage",
       "languages": ["en-GB", "de-DE", "fr-FR", "es-ES", "it-IT"]
     },
-    "Asia": {
+    "Asia Pacific": {
       "style": "Respectful, community-oriented, innovative",
       "values": "harmony, technology, collective benefit",
       "languages": ["zh-CN", "ja-JP", "ko-KR", "hi-IN"]
     },
-    "South America": {
+    "Latin America": {
       "style": "Warm, passionate, family-oriented",
       "values": "relationships, joy, tradition",
       "languages": ["es-AR", "pt-BR"]

@@ -24,12 +24,18 @@ creative-automation-pipeline/
 
 ## Setup
 
-1. **Install dependencies**:
+1. **Create and activate virtual environment**:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Configure environment**:
+3. **Configure environment**:
    ```bash
    cp .env.example .env
    # Edit .env and add your OPENAI_API_KEY

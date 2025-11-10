@@ -101,6 +101,7 @@ campaign_message: Fuel your journey with natural energy
 - `examples/sample_campaign.json` - Basic campaign (generates both products)
 - `examples/sample_campaign.yaml` - YAML format example
 - `examples/campaign_with_assets.json` - Mix of existing and generated assets
+- `examples/test_moderation_fail.json` - Campaign contains failing guidelines
 
 ## Features
 

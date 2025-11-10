@@ -43,8 +43,89 @@ creative-automation-pipeline/
 
 ## Usage
 
+### Basic Usage
+
+Run the pipeline with a campaign brief:
+
 ```bash
-python src/main.py examples/sample_campaign.json
+python -m src.main examples/sample_campaign.json
+```
+
+**With custom output directory:**
+```bash
+python -m src.main examples/sample_campaign.json -o ./my_output
+```
+
+**With verbose logging:**
+```bash
+python -m src.main examples/sample_campaign.json -v
+```
+
+### Campaign Brief Format
+
+The pipeline supports both JSON and YAML formats.
+
+**Example JSON** (`examples/sample_campaign.json`):
+```json
+{
+  "campaign_id": "holiday_2024",
+  "products": [
+    {
+      "name": "Premium Coffee Blend",
+      "description": "Artisan roasted coffee beans",
+      "existing_assets": ["products/coffee.jpg"]
+    }
+  ],
+  "target_region": "North America",
+  "target_audience": "Health-conscious millennials aged 25-40",
+  "campaign_message": "Discover your perfect morning ritual",
+  "brand_colors": ["#2E7D32", "#FFFFFF"],
+  "logo_path": null
+}
+```
+
+**Example YAML** (`examples/sample_campaign.yaml`):
+```yaml
+campaign_id: summer_2024
+products:
+  - name: Premium Protein Powder
+    description: Plant-based protein powder
+    existing_assets: []
+target_region: Europe
+target_audience: Active lifestyle enthusiasts aged 20-35
+campaign_message: Fuel your journey with natural energy
+```
+
+### Example Campaigns
+
+- `examples/sample_campaign.json` - Basic campaign (generates both products)
+- `examples/sample_campaign.yaml` - YAML format example
+- `examples/campaign_with_assets.json` - Mix of existing and generated assets
+
+## Features
+
+✅ **Multi-product support** - Process 2+ products per campaign
+✅ **Asset management** - Reuse existing assets or generate new ones with DALL-E
+✅ **Multiple formats** - Create 3 aspect ratios (1:1, 9:16, 16:9)
+✅ **Text overlays** - Automatic campaign message placement
+✅ **Smart prompts** - Context-aware generation based on region and audience
+✅ **JSON/YAML support** - Flexible campaign brief formats
+✅ **Detailed reporting** - JSON reports with processing statistics
+
+## Output Structure
+
+```
+output/
+└── {campaign_id}/
+    ├── campaign_report.json
+    ├── {product_1}/
+    │   ├── 1x1.jpg
+    │   ├── 9x16.jpg
+    │   └── 16x9.jpg
+    └── {product_2}/
+        ├── 1x1.jpg
+        ├── 9x16.jpg
+        └── 16x9.jpg
 ```
 
 ## Requirements
@@ -52,6 +133,10 @@ python src/main.py examples/sample_campaign.json
 - Python 3.9+
 - OpenAI API key with DALL-E 3 access
 
-## Development Status
+## Key Design Decisions
 
-🚧 Work in progress - building components incrementally
+- **Asset reuse first**: Always checks for existing assets before generating
+- **Smart cropping**: Center-based cropping maintains focal points across ratios
+- **Rate limiting**: Built-in delays to respect API limits
+- **Error resilience**: Continues processing even if individual products fail
+- **Organized output**: Clear directory structure by campaign and product

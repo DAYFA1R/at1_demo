@@ -84,6 +84,7 @@ class CampaignStatus(BaseModel):
   campaign_id: str
   status: str
   progress: Optional[Dict[str, Any]] = None
+  latest_progress: Optional[Dict[str, Any]] = None
   report: Optional[Dict[str, Any]] = None
   error: Optional[str] = None
 
@@ -118,11 +119,22 @@ def process_campaign_task(campaign_id: str, brief: CampaignBrief, enable_copywri
     campaign_store[campaign_id]["status"] = "processing"
     campaign_store[campaign_id]["started_at"] = datetime.now().isoformat()
 
-    # Initialize pipeline
+    # Initialize progress tracking
+    progress_store[campaign_id] = []
+
+    # Define progress callback
+    def progress_callback(progress_data: Dict[str, Any]):
+      """Callback to capture progress updates from pipeline."""
+      progress_store[campaign_id].append(progress_data)
+      # Also update the latest progress in campaign store for quick access
+      campaign_store[campaign_id]["latest_progress"] = progress_data
+
+    # Initialize pipeline with progress callback
     output_path = OUTPUT_DIR / campaign_id
     pipeline = CampaignPipeline(
       output_dir=str(output_path),
-      enable_copywriting=enable_copywriting
+      enable_copywriting=enable_copywriting,
+      progress_callback=progress_callback
     )
 
     # Process campaign
@@ -212,6 +224,7 @@ async def get_campaign_status(campaign_id: str):
     campaign_id=campaign_id,
     status=campaign_data["status"],
     progress=campaign_data.get("brief"),
+    latest_progress=campaign_data.get("latest_progress"),
     report=campaign_data.get("report"),
     error=campaign_data.get("error")
   )
@@ -432,6 +445,27 @@ async def list_generated_images():
   return {
     "total": len(generated_images),
     "images": generated_images
+  }
+
+
+@app.get("/api/campaigns/{campaign_id}/progress")
+async def get_campaign_progress(campaign_id: str):
+  """
+  Get all progress updates for a campaign.
+
+  Returns a list of all progress updates in chronological order.
+  """
+  if campaign_id not in campaign_store:
+    raise HTTPException(status_code=404, detail="Campaign not found")
+
+  # Get progress updates
+  progress_updates = progress_store.get(campaign_id, [])
+
+  return {
+    "campaign_id": campaign_id,
+    "status": campaign_store[campaign_id]["status"],
+    "total_updates": len(progress_updates),
+    "progress_updates": progress_updates
   }
 
 

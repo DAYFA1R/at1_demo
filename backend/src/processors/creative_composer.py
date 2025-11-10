@@ -322,13 +322,15 @@ class CreativeComposer:
       outline_candidates = dark_colors or [black]
 
     # Find best text color that contrasts with the actual image background
+    # Require higher contrast (7:1) for better readability in real-world ads
     best_combo = None
     best_ratio = 0
+    MIN_CONTRAST = 7.0  # Stricter than WCAG AA (4.5:1) for professional quality
 
     for text_color in text_candidates:
       # Test contrast between text and actual image background
       ratio = self.calculate_contrast_ratio(text_color, image_bg_color)
-      if ratio >= 4.5 and ratio > best_ratio:
+      if ratio >= MIN_CONTRAST and ratio > best_ratio:
         best_ratio = ratio
         # Choose outline color that contrasts with text
         outline_color = None
@@ -348,7 +350,7 @@ class CreativeComposer:
           "contrast_ratio": ratio
         }
 
-    # If no brand colors meet contrast requirements, fall back to white/black
+    # If no brand colors meet strict contrast requirements, use white/black for maximum readability
     if not best_combo:
       if region_analysis["is_light"]:
         best_combo = {
@@ -456,7 +458,56 @@ class CreativeComposer:
       text_x = (img.width - text_width) // 2
       text_y = img.height - text_height - padding * 2
 
-    # Draw clean text directly on image - no effects, just great typography
+    # Create position-based directional gradient scrim (Netflix/streaming style)
+    overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    pixels = overlay.load()
+
+    # Determine scrim color (use bg_color which is the contrasting brand color)
+    scrim_color = colors["bg_color"]
+
+    # Determine gradient direction based on text position
+    # Calculate which edge the text is closest to
+    text_center_y = text_y + text_height // 2
+    text_center_x = text_x + text_width // 2
+
+    distance_to_top = text_center_y
+    distance_to_bottom = img.height - text_center_y
+    distance_to_left = text_center_x
+    distance_to_right = img.width - text_center_x
+
+    # Find the closest edge
+    min_distance = min(distance_to_top, distance_to_bottom, distance_to_left, distance_to_right)
+
+    # Create gradient from that edge across the entire image dimension
+    for y in range(img.height):
+      for x in range(img.width):
+        if min_distance == distance_to_top:
+          # Text at top - fade from top down
+          distance_from_edge = y / img.height
+        elif min_distance == distance_to_bottom:
+          # Text at bottom - fade from bottom up
+          distance_from_edge = (img.height - y) / img.height
+        elif min_distance == distance_to_left:
+          # Text at left - fade from left to right
+          distance_from_edge = x / img.width
+        else:
+          # Text at right - fade from right to left
+          distance_from_edge = (img.width - x) / img.width
+
+        # Ease-out exponential curve for smooth, natural fade
+        # Strongest at text edge, fades into image
+        fade = (1.0 - distance_from_edge) ** 2.5  # Exponential ease-out
+
+        # Very subtle max opacity (100 alpha = 39%)
+        alpha = int(fade * 100)
+
+        if alpha > 0:
+          pixels[x, y] = (*scrim_color, alpha)
+
+    # Composite gradient overlay
+    img = Image.alpha_composite(img, overlay)
+
+    # Draw text on top of gradient scrim
     draw = ImageDraw.Draw(img)
     text_color_with_alpha = (*colors["text_color"], 255)
     draw.text((text_x, text_y), wrapped_text, fill=text_color_with_alpha, font=font)

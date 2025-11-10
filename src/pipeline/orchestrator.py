@@ -73,7 +73,43 @@ class CampaignPipeline:
     print(f"Campaign Message: {brief.campaign_message}")
     print(f"Products: {brief.get_product_count()}\n")
 
-    # Step 1: Content moderation check
+    # Step 1: AI Copywriting optimization (if enabled)
+    if self.copywriter and self.enable_copywriting:
+      print("✍️  Generating optimized campaign messages...")
+      try:
+        copy_results = self.copywriter.generate_campaign_copy(brief)
+        self.report_data["copywriting"] = copy_results
+
+        # Show original vs optimized
+        print(f"   📝 Original: {brief.campaign_message}")
+        print(f"   🎯 Optimized: {copy_results['selected_message']}")
+
+        # Show confidence
+        confidence = copy_results.get('confidence_score', 0.5)
+        print(f"   📊 Confidence: {confidence:.1%}")
+
+        # Show variants if available
+        if copy_results.get('optimization', {}).get('variants'):
+          print(f"\n   Alternative variants:")
+          for i, variant in enumerate(copy_results['optimization']['variants'][:2], 1):
+            print(f"   {i}. {variant['text']}")
+            print(f"      → {variant.get('reasoning', 'N/A')}")
+
+        # Update brief with optimized message
+        original_message = brief.campaign_message
+        brief.campaign_message = copy_results['selected_message']
+        self.report_data["copywriting"]["original_message"] = original_message
+
+        print(f"\n   ✓ Using optimized message for campaign")
+        print()
+
+      except Exception as e:
+        print(f"   ⚠️  Copywriting optimization failed: {e}")
+        print(f"   → Using original message")
+        self.report_data["warnings"].append(f"Copywriting failed: {str(e)}")
+        print()
+
+    # Step 2: Content moderation check
     print("🔍 Running content moderation...")
     moderation_result = self.content_moderator.check_campaign_message(
       brief.campaign_message,
@@ -103,7 +139,7 @@ class CampaignPipeline:
 
     print(f"✓ Content approved (Risk: {moderation_result['risk_level']})\n")
 
-    # Step 2: Initialize brand validator
+    # Step 3: Initialize brand validator
     if brief.brand_colors:
       self.brand_validator = BrandComplianceValidator(
         brand_colors=brief.brand_colors,

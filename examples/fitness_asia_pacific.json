@@ -1,0 +1,20 @@
+{
+  "campaign_id": "wellness_revolution_2024",
+  "products": [
+    {
+      "name": "Bamboo Yoga Mat",
+      "description": "Eco-friendly yoga mat made from sustainable bamboo fibers",
+      "existing_assets": []
+    },
+    {
+      "name": "Smart Fitness Tracker",
+      "description": "Waterproof fitness tracker with heart rate monitoring and sleep analysis",
+      "existing_assets": []
+    }
+  ],
+  "target_region": "Asia Pacific",
+  "target_audience": "Health-conscious urban millennials balancing work and wellness",
+  "campaign_message": "Transform your body, elevate your mind",
+  "brand_colors": ["#00B894", "#6C5CE7", "#FFFFFF"],
+  "enable_copywriting": true
+}

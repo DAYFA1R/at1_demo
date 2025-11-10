@@ -1,0 +1,16 @@
+campaign_id: luxury_summer_2024
+products:
+  - name: Silk Scarf Collection
+    description: Hand-printed silk scarves with contemporary European designs
+    existing_assets: []
+  - name: Leather Crossbody Bag
+    description: Minimalist Italian leather bag with adjustable strap
+    existing_assets: []
+  - name: Designer Sunglasses
+    description: Vintage-inspired acetate sunglasses with UV protection
+    existing_assets: []
+target_region: Europe
+target_audience: Fashion-forward professionals aged 30-50 with appreciation for craftsmanship
+campaign_message: Timeless elegance meets modern sophistication
+brand_colors: ["#C9A86A", "#2C2C2C", "#F5F5F5"]
+enable_copywriting: true

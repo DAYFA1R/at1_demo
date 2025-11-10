@@ -1,0 +1,13 @@
+campaign_id: sabor_autentico_2024
+products:
+  - name: Artisan Coffee Beans
+    description: Single-origin coffee beans roasted to perfection with rich chocolate notes
+    existing_assets: []
+  - name: Organic Cacao Powder
+    description: Pure ceremonial-grade cacao from sustainable rainforest farms
+    existing_assets: []
+target_region: Latin America
+target_audience: Young families and food enthusiasts seeking authentic local flavors
+campaign_message: Taste the tradition in every sip
+brand_colors: ["#D35400", "#27AE60", "#F4D03F"]
+enable_copywriting: true

@@ -1,0 +1,25 @@
+{
+  "campaign_id": "level_up_2024",
+  "products": [
+    {
+      "name": "RGB Gaming Mouse",
+      "description": "Ultra-precise gaming mouse with 16000 DPI and customizable RGB lighting",
+      "existing_assets": []
+    },
+    {
+      "name": "Wireless Gaming Headset",
+      "description": "7.1 surround sound headset with noise cancellation and 30-hour battery",
+      "existing_assets": []
+    },
+    {
+      "name": "Streaming Webcam Pro",
+      "description": "4K webcam with auto-focus and built-in ring light for content creators",
+      "existing_assets": []
+    }
+  ],
+  "target_region": "North America",
+  "target_audience": "Gamers and content creators aged 18-35",
+  "campaign_message": "Dominate every moment",
+  "brand_colors": ["#FF0080", "#7928CA", "#0070F3"],
+  "enable_copywriting": true
+}

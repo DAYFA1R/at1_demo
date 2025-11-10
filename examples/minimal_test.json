@@ -1,0 +1,20 @@
+{
+  "campaign_id": "quick_test",
+  "products": [
+    {
+      "name": "Product Alpha",
+      "description": "First test product with minimal description",
+      "existing_assets": []
+    },
+    {
+      "name": "Product Beta",
+      "description": "Second test product for quick validation",
+      "existing_assets": []
+    }
+  ],
+  "target_region": "North America",
+  "target_audience": "General audience",
+  "campaign_message": "Simple and effective",
+  "brand_colors": ["#000000", "#FFFFFF"],
+  "enable_copywriting": false
+}

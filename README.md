@@ -1251,9 +1251,3 @@ Contributions are welcome! Please follow these guidelines:
 3. Make your changes
 4. Test thoroughly (both backend and frontend)
 5. Submit a pull request
-
----
-
-## License
-
-[Your License Here]

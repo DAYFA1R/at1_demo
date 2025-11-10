@@ -54,7 +54,8 @@ export default function CampaignForm({ onSubmit }) {
 
               // Parse value types
               if (key === 'brand_colors') {
-                data[key] = value ? value.replace(/[\[\]]/g, '').split(',').map(c => c.trim()) : [];
+                // Parse array, remove brackets and quotes
+                data[key] = value ? value.replace(/[\[\]"']/g, '').split(',').map(c => c.trim()).filter(c => c) : [];
               } else if (value === 'true') {
                 data[key] = true;
               } else if (value === 'false') {

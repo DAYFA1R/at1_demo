@@ -285,3 +285,203 @@
   color: var(--neon-pink);
   font-weight: 700;
 }
+
+/* Copywriting Insights */
+.copywriting-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(214, 57, 255, 0.05);
+  border-radius: 12px;
+  border: 2px solid rgba(214, 57, 255, 0.2);
+}
+
+.copywriting-section h4 {
+  color: var(--neon-purple);
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  text-shadow: 0 0 10px rgba(214, 57, 255, 0.4);
+}
+
+.copywriting-section h5 {
+  color: var(--neon-cyan);
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-size: clamp(1rem, 2vw, 1.125rem);
+}
+
+.message-evolution {
+  background: rgba(18, 18, 26, 0.6);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--neon-pink);
+}
+
+.message-evolution > div {
+  margin: 0.5rem 0;
+  color: var(--text-primary);
+}
+
+.ab-variants, .ab-tests {
+  margin-top: 1.5rem;
+}
+
+.variant-card, .test-card {
+  background: rgba(18, 18, 26, 0.6);
+  padding: 1rem;
+  margin: 0.75rem 0;
+  border-radius: 8px;
+  border-left: 3px solid var(--neon-cyan);
+}
+
+.variant-text, .test-text {
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
+.variant-details, .test-approach, .test-hypothesis {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.test-approach {
+  color: var(--neon-yellow);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.persona-details {
+  margin-top: 1.5rem;
+  background: rgba(18, 18, 26, 0.4);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.persona-details summary {
+  color: var(--neon-cyan);
+  font-size: 1rem;
+  padding: 0.5rem;
+}
+
+.persona-details[open] summary {
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(5, 217, 232, 0.3);
+}
+
+.persona-content > div {
+  margin: 0.75rem 0;
+  padding-left: 1rem;
+  color: var(--text-primary);
+}
+
+/* Warnings Section */
+.warnings-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 251, 150, 0.05);
+  border-radius: 12px;
+  border: 2px solid var(--neon-yellow);
+}
+
+.warnings-section h4 {
+  color: var(--neon-yellow);
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.warnings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.warnings-list li {
+  background: rgba(18, 18, 26, 0.6);
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  border-radius: 6px;
+  border-left: 3px solid var(--neon-yellow);
+  color: var(--text-primary);
+}
+
+/* Compliance Details */
+.compliance-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.compliance-summary > div {
+  background: rgba(18, 18, 26, 0.6);
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.compliance-details {
+  margin-top: 1.5rem;
+  background: rgba(18, 18, 26, 0.4);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.compliance-details summary {
+  color: var(--neon-cyan);
+  font-size: 1rem;
+  padding: 0.5rem;
+}
+
+.compliance-details[open] summary {
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(5, 217, 232, 0.3);
+}
+
+.product-compliance {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: rgba(18, 18, 26, 0.3);
+  border-radius: 8px;
+}
+
+.product-compliance h5 {
+  color: var(--neon-pink);
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.compliance-check {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: rgba(18, 18, 26, 0.5);
+  border-radius: 6px;
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.check-header {
+  color: var(--neon-cyan);
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.non-compliant {
+  color: var(--neon-yellow);
+  font-size: 1.2rem;
+}
+
+.check-details {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding-left: 1rem;
+}
+
+.check-details > div {
+  margin: 0.5rem 0;
+}

@@ -347,7 +347,7 @@ export default function CampaignForm({ onSubmit }) {
               setFormData({ ...formData, enable_copywriting: e.target.checked })
             }
           />
-          Enable AI Copywriting Optimization
+          Optimize Copy for Persona and Localization
         </label>
       </div>
 

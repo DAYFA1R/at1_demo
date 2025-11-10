@@ -44,6 +44,19 @@ class CreativeComposer:
 
     if system == "Darwin":  # macOS
       # macOS fonts with international support
+      if needs_cjk:
+        if language_code and language_code.startswith('ko'):
+          # Korean-specific font
+          font_candidates.extend([
+            "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+          ])
+        else:
+          # Chinese and Japanese
+          font_candidates.extend([
+            "/System/Library/Fonts/Hiragino Sans GB.ttc",
+            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+          ])
       if needs_arabic or needs_hebrew:
         font_candidates.extend([
           "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
@@ -370,6 +383,51 @@ class CreativeComposer:
 
     return best_combo
 
+  def _wrap_text_to_width(self, text: str, font: ImageFont.FreeTypeFont,
+                          max_width: int, draw: ImageDraw.ImageDraw) -> str:
+    """
+    Wrap text to fit within a maximum pixel width.
+
+    This method properly handles all languages by measuring actual pixel width
+    instead of character count.
+
+    Args:
+      text: Text to wrap
+      font: Font to use for measurement
+      max_width: Maximum width in pixels
+      draw: ImageDraw context for text measurement
+
+    Returns:
+      Wrapped text with newlines
+    """
+    words = text.split()
+    lines = []
+    current_line = []
+
+    for word in words:
+      # Try adding this word to current line
+      test_line = ' '.join(current_line + [word])
+      bbox = draw.textbbox((0, 0), test_line, font=font)
+      line_width = bbox[2] - bbox[0]
+
+      if line_width <= max_width:
+        current_line.append(word)
+      else:
+        # Line is too long, start new line
+        if current_line:
+          lines.append(' '.join(current_line))
+          current_line = [word]
+        else:
+          # Single word is too long, add it anyway to avoid infinite loop
+          lines.append(word)
+          current_line = []
+
+    # Add remaining words
+    if current_line:
+      lines.append(' '.join(current_line))
+
+    return '\n'.join(lines)
+
   def add_text_overlay(self, image: Image.Image, message: str,
                        position: str = None, language_code: Optional[str] = None,
                        brand_colors: Optional[List[str]] = None) -> Image.Image:
@@ -416,24 +474,65 @@ class CreativeComposer:
       if font_path:
         font = ImageFont.truetype(font_path, font_size)
       else:
+        # Try to find any available font as fallback
+        font_path = self._find_font()
+        if font_path:
+          font = ImageFont.truetype(font_path, font_size)
+        else:
+          # Last resort: use default font (but this won't support international characters)
+          font = ImageFont.load_default()
+    except Exception as e:
+      # If font loading fails, try the default font path
+      try:
+        if self.font_path:
+          font = ImageFont.truetype(self.font_path, font_size)
+        else:
+          font = ImageFont.load_default()
+      except Exception:
         font = ImageFont.load_default()
-    except Exception:
-      font = ImageFont.load_default()
 
     # Create drawing context for measuring text
     draw = ImageDraw.Draw(img)
 
-    # Wrap text to fit within image width
-    max_width_chars = img.width // (font_size // 2)
-    wrapped_text = textwrap.fill(message, width=max(20, max_width_chars))
+    # Define padding
+    padding = 40  # Comfortable padding from edges
+
+    # Calculate available width for text (leaving padding on both sides)
+    max_text_width = img.width - (padding * 2)
+
+    # Wrap text to fit within available width using pixel-based wrapping
+    wrapped_text = self._wrap_text_to_width(message, font, max_text_width, draw)
 
     # Get text bounding box
     bbox = draw.textbbox((0, 0), wrapped_text, font=font)
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
 
+    # If text is still too large, try reducing font size
+    max_attempts = 3
+    attempt = 0
+    while (text_width > max_text_width or text_height > img.height - padding * 4) and attempt < max_attempts:
+      font_size = int(font_size * 0.85)  # Reduce by 15%
+      try:
+        font_path = self._find_font(language_code) if language_code else self.font_path
+        if font_path:
+          font = ImageFont.truetype(font_path, font_size)
+        else:
+          # If no font path found, keep using the current font at smaller size
+          # Don't fallback to load_default() as it doesn't support international characters
+          break
+      except Exception:
+        # If font loading fails, keep the current font
+        break
+
+      # Re-wrap with new font size (draw context is still valid)
+      wrapped_text = self._wrap_text_to_width(message, font, max_text_width, draw)
+      bbox = draw.textbbox((0, 0), wrapped_text, font=font)
+      text_width = bbox[2] - bbox[0]
+      text_height = bbox[3] - bbox[1]
+      attempt += 1
+
     # Calculate position based on smart positioning or specified position
-    padding = 40  # Comfortable padding from edges
 
     # Map positions to coordinates
     if position in ["bottom", "bottom-center"]:

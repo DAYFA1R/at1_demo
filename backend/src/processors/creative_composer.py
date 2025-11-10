@@ -496,8 +496,8 @@ class CreativeComposer:
       # Resize to target dimensions
       resized = self.resize_to_dimensions(cropped, aspect_ratio.dimensions)
 
-      # Add text overlay with brand colors
-      final = self.add_text_overlay(resized, message, position="bottom", brand_colors=brand_colors)
+      # Add text overlay with brand colors and smart positioning
+      final = self.add_text_overlay(resized, message, position=None, brand_colors=brand_colors)
 
       # Save with quality optimization
       filename = f"{aspect_ratio.display_name}.jpg"
@@ -570,8 +570,8 @@ class CreativeComposer:
         # Resize to target dimensions
         resized = self.resize_to_dimensions(cropped, aspect_ratio.dimensions)
 
-        # Add localized text overlay with language-specific font and brand colors
-        final = self.add_text_overlay(resized, message, position="bottom",
+        # Add localized text overlay with language-specific font, brand colors, and smart positioning
+        final = self.add_text_overlay(resized, message, position=None,
                                     language_code=lang_code, brand_colors=brand_colors)
 
         # Save with quality optimization

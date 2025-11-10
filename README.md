@@ -235,8 +235,8 @@ This enables the frontend to display live progress instead of a generic loading 
 Integrates with OpenAI's DALL-E 3 API for product image generation.
 
 **Key Features**:
-- Hex-to-color-name conversion for better DALL-E understanding
-- Brand color-focused prompt engineering
+- HSL-based color name conversion for accurate brand color interpretation across any hex value
+- Brand color-focused prompt engineering with bright studio lighting
 - Rate limiting to respect API quotas
 - Automatic image download and storage
 
@@ -299,7 +299,7 @@ Transforms source images into design-ready advertising creatives with brand-awar
 **Key Features**:
 - **Smart Positioning Algorithm**: Analyzes 6 candidate regions to find optimal text placement based on uniformity and contrast
 - **Brand-Aware Text Colors**: Uses campaign brand colors with WCAG AAA (7:1) contrast compliance
-- **Edge-Based Gradient Scrims**: Smooth directional vignettes (Netflix/Apple TV+ style) that fade from edge to transparent
+- **Edge-Based Gradient Scrims**: Smooth directional vignettes (Netflix/Apple TV+ style) using contrasting brand colors that enhance text readability
 - **WCAG Compliance**: Calculates relative luminance and contrast ratios per accessibility guidelines
 - **International Font Support**: Arabic, Hebrew, CJK languages with appropriate font selection
 - **Smart Center Cropping**: Maintains focal points across aspect ratios
@@ -355,8 +355,8 @@ Ensures generated creatives meet brand guidelines using a split validation appro
    - **Checked on pre-overlay image** (before gradient scrim) for accurate color detection
 
 2. **Text Readability**: Checks text overlay contrast
-   - Analyzes brightness in text regions
-   - Recommends white or dark text
+   - Analyzes brightness in text regions (acceptable range: <130 or >145 brightness)
+   - Recommends white or dark text based on background
    - **Checked on final image** (with gradient scrim) for accurate contrast assessment
 
 **Split Validation Approach**:

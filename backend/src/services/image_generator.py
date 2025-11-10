@@ -204,9 +204,11 @@ class ImageGenerator:
       # No brand colors specified
       prompt_parts.append(f"Professional product photography of {product.description}")
 
-    # Style guidance (secondary to colors)
-    prompt_parts.append("clean, modern composition")
-    prompt_parts.append("well-lit, high quality")
+    # Style guidance (secondary to colors) - emphasize bright, even lighting
+    prompt_parts.append("bright studio lighting")
+    prompt_parts.append("evenly lit, professional photography")
+    prompt_parts.append("clean white background or soft gradient")
+    prompt_parts.append("high-key lighting, no shadows")
     prompt_parts.append("social media advertising style")
 
     # Target audience context (minimal)

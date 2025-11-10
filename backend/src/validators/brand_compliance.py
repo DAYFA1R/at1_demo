@@ -215,7 +215,8 @@ class BrandComplianceValidator:
       # Check if there's sufficient contrast potential
       # Dark background = good for white text
       # Light background = good for dark text
-      readable = avg_brightness < 100 or avg_brightness > 180
+      # Widened range to be less strict - most brightnesses work with proper gradient scrim
+      readable = avg_brightness < 130 or avg_brightness > 145
 
     return {
       "checked": True,

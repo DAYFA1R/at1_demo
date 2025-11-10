@@ -5,8 +5,8 @@ An AI-powered platform for automating social media campaign creative generation 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Architecture](#architecture)
 - [Quick Start](#quick-start)
+- [Architecture](#architecture)
 - [Project Structure](#project-structure)
 - [Backend Components](#backend-components)
 - [API Endpoints](#api-endpoints)
@@ -32,6 +32,50 @@ This platform automates the creation of social media advertising creatives by:
 - **Backend**: Python 3.11, FastAPI, OpenAI API (DALL-E 3, GPT-4), Pillow
 - **Frontend**: React, Vite, Tailwind CSS
 - **Infrastructure**: Docker, Docker Compose
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Docker and Docker Compose
+- OpenAI API key with DALL-E 3 and GPT-4 access
+
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd at1_demo
+   ```
+
+2. **Configure environment**:
+   ```bash
+   cp backend/.env.example backend/.env
+   # Edit backend/.env and add your OPENAI_API_KEY
+   ```
+
+3. **Start the application**:
+   ```bash
+   docker compose up --build
+   ```
+
+4. **Access the application**:
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+
+### First Campaign
+
+1. Navigate to http://localhost:5173
+2. Fill out the campaign form:
+   - Add 2+ products with descriptions (minimum 2 required)
+   - Set target region and audience
+   - Enter campaign message
+   - (Optional) Add brand colors for compliance checking
+3. Click "Generate Campaign"
+4. View generated assets in the gallery once processing completes
 
 ---
 
@@ -97,50 +141,6 @@ This platform automates the creation of social media advertising creatives by:
                 ↓
 5. Frontend displays results in gallery
 ```
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Docker and Docker Compose
-- OpenAI API key with DALL-E 3 and GPT-4 access
-
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd at1_demo
-   ```
-
-2. **Configure environment**:
-   ```bash
-   cp backend/.env.example backend/.env
-   # Edit backend/.env and add your OPENAI_API_KEY
-   ```
-
-3. **Start the application**:
-   ```bash
-   docker compose up --build
-   ```
-
-4. **Access the application**:
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:8000
-   - API Documentation: http://localhost:8000/docs
-
-### First Campaign
-
-1. Navigate to http://localhost:5173
-2. Fill out the campaign form:
-   - Add 2+ products with descriptions (minimum 2 required)
-   - Set target region and audience
-   - Enter campaign message
-   - (Optional) Add brand colors for compliance checking
-3. Click "Generate Campaign"
-4. View generated assets in the gallery once processing completes
 
 ---
 

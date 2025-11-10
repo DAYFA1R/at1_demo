@@ -109,42 +109,30 @@ class ImageGenerator:
     """
     prompt_parts = []
 
-    # Base description
-    prompt_parts.append(f"Professional product photography of {product.description}")
-
-    # Brand colors FIRST and PROMINENTLY if specified
+    # Brand colors MUST BE FIRST AND DOMINANT if specified
     if brief.brand_colors and len(brief.brand_colors) > 0:
       # Convert hex to color names for better DALL-E understanding
-      color_names = [self._hex_to_color_name(c) for c in brief.brand_colors[:3]]
-      colors_str = ', '.join(color_names)
+      color_names = [self._hex_to_color_name(c) for c in brief.brand_colors[:2]]
+      primary_color = color_names[0]
+      secondary_color = color_names[1] if len(color_names) > 1 else primary_color
 
-      # Emphasize brand colors prominently
-      prompt_parts.append(f"featuring {colors_str} brand colors prominently")
-      prompt_parts.append(f"with {colors_str} color scheme throughout the image")
-      prompt_parts.append(f"{colors_str} background or accents")
+      # Make colors THE PRIMARY FOCUS
+      prompt_parts.append(f"{primary_color} and {secondary_color} colored product photography")
+      prompt_parts.append(f"{product.description} on {primary_color} background")
+      prompt_parts.append(f"vibrant {primary_color} and {secondary_color} color palette")
+      prompt_parts.append(f"bold {primary_color} tones dominating the image")
+    else:
+      # No brand colors specified
+      prompt_parts.append(f"Professional product photography of {product.description}")
 
-    # Style guidance
-    prompt_parts.append("modern, clean, minimalist style")
-    prompt_parts.append("bright, well-lit, high quality")
-    prompt_parts.append("suitable for social media advertising")
+    # Style guidance (secondary to colors)
+    prompt_parts.append("clean, modern composition")
+    prompt_parts.append("well-lit, high quality")
+    prompt_parts.append("social media advertising style")
 
-    # Target audience context
+    # Target audience context (minimal)
     if brief.target_audience:
       prompt_parts.append(f"appealing to {brief.target_audience}")
-
-    # Regional styling
-    region_styles = {
-      "North America": "contemporary Western aesthetic",
-      "Europe": "sophisticated European design sensibility",
-      "Asia": "vibrant modern Asian market style",
-      "South America": "colorful Latin American visual appeal",
-      "Middle East": "elegant Middle Eastern style",
-    }
-
-    for region, style in region_styles.items():
-      if region.lower() in brief.target_region.lower():
-        prompt_parts.append(style)
-        break
 
     # Combine into final prompt
     prompt = ", ".join(prompt_parts)

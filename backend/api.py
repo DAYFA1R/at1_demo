@@ -277,10 +277,14 @@ async def get_campaign_assets(campaign_id: str):
 @app.get("/api/campaigns/{campaign_id}/assets/{product}/{language}/{filename}")
 async def get_asset_file(campaign_id: str, product: str, language: str, filename: str):
   """Serve a specific asset file."""
-  if campaign_id not in campaign_store:
-    raise HTTPException(status_code=404, detail="Campaign not found")
-
-  output_path = Path(campaign_store[campaign_id]["output_path"])
+  # Try to get from campaign store first
+  if campaign_id in campaign_store:
+    output_path = Path(campaign_store[campaign_id]["output_path"])
+  else:
+    # Fall back to filesystem scan for campaigns created before API started
+    output_path = OUTPUT_DIR / campaign_id
+    if not output_path.exists():
+      raise HTTPException(status_code=404, detail="Campaign not found")
 
   # Handle nested campaign directory structure
   nested_campaign_dir = output_path / campaign_id
@@ -298,10 +302,14 @@ async def get_asset_file(campaign_id: str, product: str, language: str, filename
 @app.get("/api/campaigns/{campaign_id}/assets/{product}/{filename}")
 async def get_asset_file_no_lang(campaign_id: str, product: str, filename: str):
   """Serve a specific asset file (no language subdirectory)."""
-  if campaign_id not in campaign_store:
-    raise HTTPException(status_code=404, detail="Campaign not found")
-
-  output_path = Path(campaign_store[campaign_id]["output_path"])
+  # Try to get from campaign store first
+  if campaign_id in campaign_store:
+    output_path = Path(campaign_store[campaign_id]["output_path"])
+  else:
+    # Fall back to filesystem scan for campaigns created before API started
+    output_path = OUTPUT_DIR / campaign_id
+    if not output_path.exists():
+      raise HTTPException(status_code=404, detail="Campaign not found")
 
   # Handle nested campaign directory structure
   nested_campaign_dir = output_path / campaign_id

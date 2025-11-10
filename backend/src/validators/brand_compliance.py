@@ -15,14 +15,15 @@ class BrandComplianceValidator:
 
   def __init__(self, brand_colors: Optional[List[str]] = None,
                logo_path: Optional[str] = None,
-               color_tolerance: int = 30):
+               color_tolerance: int = 15):
     """
     Initialize the brand compliance validator.
 
     Args:
       brand_colors: List of brand colors in hex format (e.g., ["#FF0000"])
       logo_path: Path to brand logo file
-      color_tolerance: Color matching tolerance (0-100)
+      color_tolerance: Color matching tolerance (0-100, lower = stricter)
+                      Default 15 means colors must be 85% similar to count
     """
     self.brand_colors = self._parse_brand_colors(brand_colors or [])
     self.logo_path = Path(logo_path) if logo_path else None
@@ -128,20 +129,35 @@ class BrandComplianceValidator:
       dominant_colors = self.extract_dominant_colors(img, count=5)
 
     # Check if any dominant colors match brand colors
+    # Track which image colors we've already matched to avoid double-counting
     matches = []
+    matched_image_colors = set()
+
     for dom_color, percentage in dominant_colors:
+      dom_hex = self._rgb_to_hex(dom_color)
+
+      # Find best matching brand color for this image color
+      best_match = None
+      best_similarity = 0
+
       for brand_color in self.brand_colors:
         distance = self._color_distance(dom_color, brand_color)
         # Normalize distance to 0-100 scale
         similarity = max(0, 100 - (distance / 4.41))
 
-        if similarity >= (100 - self.color_tolerance):
-          matches.append({
-            "image_color": self._rgb_to_hex(dom_color),
+        if similarity >= (100 - self.color_tolerance) and similarity > best_similarity:
+          best_similarity = similarity
+          best_match = {
+            "image_color": dom_hex,
             "brand_color": self._rgb_to_hex(brand_color),
             "similarity": round(similarity, 1),
             "coverage": percentage
-          })
+          }
+
+      # Add best match if found and not already matched
+      if best_match and dom_hex not in matched_image_colors:
+        matches.append(best_match)
+        matched_image_colors.add(dom_hex)
 
     # Calculate overall compliance
     if matches:

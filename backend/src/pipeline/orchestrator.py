@@ -285,6 +285,7 @@ class CampaignPipeline:
           brand_colors=brief.brand_colors  # Pass brand colors for text overlay
         )
         # Flatten for backward compatibility (use English for compliance check)
+        # Note: variations now contains tuples of (final_path, pre_overlay_path)
         variations = all_variations.get("en", {})
       else:
         # Single language - use original method but put in 'en' folder
@@ -316,8 +317,15 @@ class CampaignPipeline:
       print(f"\n🎨 Checking brand compliance...")
       self._update_progress("compliance", f"Validating brand compliance for {product.name}...")
 
-      for name, path in variations.items():
-        compliance = self.brand_validator.validate_creative(path)
+      for name, paths in variations.items():
+        # Unpack tuple: (final_path, pre_overlay_path)
+        final_path, pre_overlay_path = paths
+
+        # Validate both: colors on pre-overlay, readability on final
+        compliance = self.brand_validator.validate_creative_split(
+          pre_overlay_path,  # For color checking
+          final_path        # For readability checking
+        )
         compliance_results[name] = compliance
 
         if compliance["overall_score"] < 70:
@@ -331,10 +339,13 @@ class CampaignPipeline:
     total_variations = sum(len(v) for v in all_variations.values())
     self.report_data["variations_created"] += total_variations
 
+    # Extract just the final paths for the report (not the tuples)
+    variation_names = list(variations.keys())
+
     product_data = {
       "name": product.name,
       "source": "existing" if product.has_existing_assets() else "generated",
-      "variations": list(variations.keys()),
+      "variations": variation_names,
       "output_path": str(product_output),
       "languages": list(all_variations.keys()),
       "total_files": total_variations

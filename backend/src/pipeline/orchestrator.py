@@ -223,7 +223,8 @@ class CampaignPipeline:
           img,
           messages,
           product_output,
-          product.name
+          product.name,
+          brand_colors=brief.brand_colors  # Pass brand colors for text overlay
         )
         # Flatten for backward compatibility (use English for compliance check)
         variations = all_variations.get("en", {})
@@ -234,7 +235,8 @@ class CampaignPipeline:
           img,
           brief.campaign_message,
           en_output,
-          product.name
+          product.name,
+          brand_colors=brief.brand_colors  # Pass brand colors for text overlay
         )
         all_variations = {"en": variations}
 
